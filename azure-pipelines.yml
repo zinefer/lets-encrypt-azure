@@ -1,0 +1,96 @@
+# build definition for function app
+
+resources:
+- repo: self
+  clean: true
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+
+stages:
+- stage: build
+  jobs:
+  - job: build
+    pool:
+      name: 'Default'
+    variables:
+      BuildConfiguration: 'release'
+    steps:
+    - checkout: self
+
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '2.2.x'
+
+    - task: DotNetCoreCLI@2
+      displayName: Build
+      inputs:
+        projects: '**/*.csproj'
+        arguments: '--configuration $(BuildConfiguration)'
+    
+    - task: DotNetCoreCLI@2
+      displayName: Test
+      inputs:
+        command: test
+        projects: '**/*Tests/*.csproj'
+        arguments: '--configuration $(BuildConfiguration)'
+
+    - task: DotNetCoreCLI@2
+      displayName: Publish
+      inputs:
+        command: publish
+        publishWebProjects: false
+        projects: '**/LetsEncrypt.Func.csproj'
+        arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
+        zipAfterPublish: false
+
+    - task: PublishPipelineArtifact@0
+      displayName: 'Publish build Artifact'
+      inputs:
+        targetPath: '$(build.artifactstagingdirectory)'
+        artifactName: function
+
+    - task: PublishPipelineArtifact@0
+      displayName: 'Publish Artifact: Infrastructure Scripts'
+      inputs:
+        targetPath: deploy
+        artifactName: deploy
+
+- stage: release
+  jobs:
+  - job: deploy
+    pool:
+      name: 'Default'
+    variables:
+      ResourceGroupName: 'letsencrypt-func'
+
+    steps:
+    - task: DownloadPipelineArtifact@1
+      inputs:
+        artifactName: deploy
+        targetPath: '$(System.ArtifactsDirectory)'
+
+    - task: AzurePowerShell@4
+      displayName: 'Deploy'
+      inputs:
+        azureSubscription: 'Azure Private'
+        ScriptPath: '$(System.ArtifactsDirectory)/Deploy.ps1'
+        ScriptArguments: '-ResourceGroupName $(ResourceGroupName)'
+        azurePowerShellVersion: LatestVersion
+
+    - task: DownloadPipelineArtifact@1
+      inputs:
+        artifactName: function
+        targetPath: '$(System.ArtifactsDirectory)'
+
+    - task: AzureFunctionApp@1
+      displayName: 'Deploy Azure Function App'
+      inputs:
+        azureSubscription: 'Azure Private'
+        appType: functionApp
+        appName: '$(ResourceGroupName)'
+        package: '$(System.ArtifactsDirectory)/LetsEncrypt.Func'
+        deploymentMethod: runFromPackage
