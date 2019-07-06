@@ -6,8 +6,6 @@
 
         public string CdnName { get; set; }
 
-        public string EndpointName { get; set; }
-
-        public string HostName { get; set; }
+        public EndpointDetails[] Endpoints { get; set; }
     }
 }

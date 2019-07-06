@@ -49,13 +49,13 @@ namespace LetsEncrypt.Tests
             context.Options.Should().Be(options);
 
             // ensure account wasn't read from disk
-            storageMock.Verify(x => x.ReadStringAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            storageMock.Verify(x => x.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
             factoryMock.Verify(x => x.GetContext(options.CertificateAuthorityUri, null));
 
             // extension methods adds mailto to emailbefore calling the actual method
             acmeContextMock.Verify(x => x.NewAccount(It.Is<IList<string>>(list => list.Count == 1 && list[0] == $"mailto:{options.Email}"), true));
 
-            storageMock.Verify(x => x.WriteStringAsync(It.IsAny<string>(), keyInPemFormat, It.IsAny<CancellationToken>()));
+            storageMock.Verify(x => x.SetAsync(It.IsAny<string>(), keyInPemFormat, It.IsAny<CancellationToken>()));
         }
 
         [Test]
@@ -72,7 +72,7 @@ namespace LetsEncrypt.Tests
                 .Returns(accountFilename);
             storageMock.Setup(x => x.ExistsAsync(accountFilename, It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(true));
-            storageMock.Setup(x => x.ReadStringAsync(accountFilename, It.IsAny<CancellationToken>()))
+            storageMock.Setup(x => x.GetAsync(accountFilename, It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(keyInPemFormat));
 
             var keyMock = new Mock<IKey>();
@@ -103,11 +103,11 @@ namespace LetsEncrypt.Tests
             context.Options.Should().Be(options);
 
             // account was read from disk
-            storageMock.Verify(x => x.ReadStringAsync(accountFilename, It.IsAny<CancellationToken>()));
+            storageMock.Verify(x => x.GetAsync(accountFilename, It.IsAny<CancellationToken>()));
             // account was restored from key
             contextFactoryMock.Verify(x => x.GetContext(options.CertificateAuthorityUri, keyMock.Object));
             // key was not written back to storage
-            storageMock.Verify(x => x.WriteStringAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            storageMock.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         }
     }
 }

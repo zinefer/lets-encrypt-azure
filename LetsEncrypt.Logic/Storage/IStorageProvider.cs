@@ -19,17 +19,19 @@ namespace LetsEncrypt.Logic.Storage
         /// <returns></returns>
         Task<bool> ExistsAsync(string fileName, CancellationToken cancellationToken);
 
+        Task<string[]> ListAsync(string prefix, CancellationToken cancellationToken);
+
         /// <summary>
         /// Reads the content of an existing file.
         /// </summary>
         /// <returns></returns>
-        Task<string> ReadStringAsync(string fileName, CancellationToken cancellationToken);
+        Task<string> GetAsync(string fileName, CancellationToken cancellationToken);
 
         /// <summary>
         /// Creates or updates the file with the content.
         /// </summary>
         /// <returns></returns>
-        Task WriteStringAsync(string fileName, string content, CancellationToken cancellationToken);
+        Task SetAsync(string fileName, string content, CancellationToken cancellationToken);
 
         /// <summary>
         /// Deletes a file if it exists.

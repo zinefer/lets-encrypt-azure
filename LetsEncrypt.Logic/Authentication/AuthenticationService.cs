@@ -61,7 +61,7 @@ namespace LetsEncrypt.Logic.Authentication
             if (!await _storageProvider.ExistsAsync(fileName, cancellationToken))
                 return null;
 
-            var content = await _storageProvider.ReadStringAsync(fileName, cancellationToken);
+            var content = await _storageProvider.GetAsync(fileName, cancellationToken);
             return _keyFactory.FromPem(content);
         }
 
@@ -72,7 +72,7 @@ namespace LetsEncrypt.Logic.Authentication
         {
             var filename = GetAccountKeyFilename(options);
             var content = existingKey.ToPem();
-            return _storageProvider.WriteStringAsync(filename, content, cancellationToken);
+            return _storageProvider.SetAsync(filename, content, cancellationToken);
         }
 
         private string GetAccountKeyFilename(IAcmeOptions options)

@@ -1,6 +1,8 @@
 ﻿using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,7 +34,24 @@ namespace LetsEncrypt.Logic.Storage
             return await block.ExistsAsync(null, null, cancellationToken);
         }
 
-        public async Task<string> ReadStringAsync(
+        public async Task<string[]> ListAsync(string prefix, CancellationToken cancellationToken)
+        {
+            var container = await GetContainerAsync(false, cancellationToken);
+
+            var list = new List<string>();
+            BlobContinuationToken token = null;
+            do
+            {
+                var r = await container.ListBlobsSegmentedAsync(prefix, token);
+                list.AddRange(r.Results.Select(b => b.Uri.GetLeftPart(UriPartial.Path).Substring(container.Uri.ToString().Length)));
+                token = r.ContinuationToken;
+            }
+            while (token != null);
+
+            return list.ToArray();
+        }
+
+        public async Task<string> GetAsync(
             string fileName,
             CancellationToken cancellationToken)
         {
@@ -40,7 +59,7 @@ namespace LetsEncrypt.Logic.Storage
             return await blob.DownloadTextAsync(Encoding.UTF8, null, null, null, cancellationToken);
         }
 
-        public async Task WriteStringAsync(
+        public async Task SetAsync(
             string fileName,
             string content,
             CancellationToken cancellationToken)

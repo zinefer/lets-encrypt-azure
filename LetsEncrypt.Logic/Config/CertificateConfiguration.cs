@@ -19,6 +19,13 @@
         public string KeyVaultResourceGroupName { get; set; }
 
         /// <summary>
+        /// Certificates are valid for 3 month.
+        /// This parameter controls how many days are remaining before a renewal occurs.
+        /// Defaults to 30 days before expiration.
+        /// </summary>
+        public int ReneweXDaysBeforeExpiry { get; set; } = 30;
+
+        /// <summary>
         /// The keyvault in which to persist the new certificate.
         /// Requires Create + Update permissions for the MSI of the function app.
         /// </summary>

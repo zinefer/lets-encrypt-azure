@@ -42,7 +42,7 @@ namespace LetsEncrypt.Logic.Acme
 
         private Task PersistFileChallengeAsync((string fileName, string content)[] wellKnownChallengeFiles, CancellationToken cancellationToken)
         {
-            return Task.WhenAll(wellKnownChallengeFiles.Select(c => _storageProvider.WriteStringAsync($".well-known/acme-challenge/{c.fileName}", c.content, cancellationToken)));
+            return Task.WhenAll(wellKnownChallengeFiles.Select(c => _storageProvider.SetAsync($".well-known/acme-challenge/{c.fileName}", c.content, cancellationToken)));
         }
     }
 }
