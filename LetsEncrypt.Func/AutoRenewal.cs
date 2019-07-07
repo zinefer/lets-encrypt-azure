@@ -7,6 +7,7 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
@@ -58,16 +59,17 @@ namespace LetsEncrypt.Func
                 {
                     foreach (var cert in config.Certificates)
                     {
+                        var hostNames = string.Join(";", cert.HostNames);
                         try
                         {
                             var result = await renewalService.RenewCertificateAsync(config.Acme, cert, cancellationToken);
                             switch (result)
                             {
                                 case RenewalResult.NoChange:
-                                    log.LogInformation($"Certificate renewal skipped for: {cert.HostNames} (no change required yet)");
+                                    log.LogInformation($"Certificate renewal skipped for: {hostNames} (no change required yet)");
                                     break;
                                 case RenewalResult.Success:
-                                    log.LogInformation($"Certificate renewal succeeded for: {cert.HostNames}");
+                                    log.LogInformation($"Certificate renewal succeeded for: {hostNames}");
                                     break;
                                 default:
                                     throw new ArgumentOutOfRangeException(result.ToString());
@@ -75,7 +77,7 @@ namespace LetsEncrypt.Func
                         }
                         catch (Exception e)
                         {
-                            log.LogError(e, $"Certificate renewal failed for: {cert.HostNames}!");
+                            log.LogError(e, $"Certificate renewal failed for: {hostNames}!");
                         }
                     }
                 }
@@ -90,8 +92,7 @@ namespace LetsEncrypt.Func
         {
             var configs = new List<(string, Configuration)>();
             var paths = await storageProvider.ListAsync("config/", cancellationToken);
-            foreach (var path
-                in paths)
+            foreach (var path in paths)
             {
                 if ("config/sample.json".Equals(path, StringComparison.OrdinalIgnoreCase))
                     continue; // ignore
@@ -108,7 +109,8 @@ namespace LetsEncrypt.Func
             }
             if (!paths.Any())
             {
-                await storageProvider.SetAsync("config/sample.json", "", cancellationToken);
+                var content = await File.ReadAllTextAsync("sample.json", cancellationToken);
+                await storageProvider.SetAsync("config/sample.json", content, cancellationToken);
             }
             return configs.ToArray();
         }

@@ -103,7 +103,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
                     $"resourceGroups/{_resourceGroupName}/" +
                     $"providers/Microsoft.Cdn/profiles/{Name}/" +
                     $"endpoints/{endpoint.name}/customDomains/" +
-                    $"{domain}/enableCustomHttps?api-version=2019-04-15";
+                    $"{domain.name}/enableCustomHttps?api-version=2019-04-15";
 
                 var settings = new JsonSerializerSettings
                 {
@@ -129,13 +129,15 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             {
                 var content = await r.Content.ReadAsStringAsync();
                 r.EnsureSuccessStatusCode();
-                var queryUrl = r.Headers.Location;
-                while (true)
-                {
-                    var resp = await httpClient.GetAsync(queryUrl);
-                    if (resp.IsSuccessStatusCode)
-                        break;
-                }
+                // would now have to query this URL until operation completed successfully
+                // but it may take up to 6h, so just ignore
+                //var queryUrl = r.Headers.Location;
+                //while (queryUrl != null)
+                //{
+                //    var resp = await httpClient.GetAsync(queryUrl);
+                //    if (resp.StatusCode != HttpStatusCode.Accepted)
+                //        break;
+                //}
             }
         }
 

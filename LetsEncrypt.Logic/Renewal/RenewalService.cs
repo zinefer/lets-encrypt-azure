@@ -8,6 +8,7 @@ using LetsEncrypt.Logic.Providers.CertificateStores;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,6 +18,7 @@ namespace LetsEncrypt.Logic.Renewal
     {
         private readonly ILogger _log;
         private readonly IAuthenticationService _authenticationService;
+        private static readonly RNGCryptoServiceProvider _randomGenerator = new RNGCryptoServiceProvider();
 
         public RenewalService(
             IAuthenticationService authenticationService,
@@ -40,7 +42,10 @@ namespace LetsEncrypt.Logic.Renewal
             _log.LogInformation($"Working on certificate for: {hostNames}");
 
             // 1. skip if not outdated yet
-            if (!await IsRenewalRequiredAsync(options, cfg, cancellationToken))
+            var cert = await GetExistingCertificateAsync(options, cfg, cancellationToken);
+
+            // TODO: this also skips the resourceUpdate (needed in case of previous errors or incase of cert already existing) -> config flag?
+            if (cert != null)
                 return RenewalResult.NoChange;
 
             // 2. run Let's Encrypt challenge
@@ -48,7 +53,7 @@ namespace LetsEncrypt.Logic.Renewal
             var order = await ValidateOrderAsync(options, cfg, cancellationToken);
 
             // 3. save certificate
-            var cert = await GenerateAndStoreCertificateAsync(order, cfg, cancellationToken);
+            cert = await GenerateAndStoreCertificateAsync(order, cfg, cancellationToken);
 
             // 4. update Azure resource
             var resource = cfg.ParseTargetResource();
@@ -63,9 +68,9 @@ namespace LetsEncrypt.Logic.Renewal
         /// <param name="options"></param>
         /// <param name="cfg"></param>
         /// <param name="cancellationToken"></param>
-        /// <returns>True if must be renewed, false otherwise</returns>
-        private async Task<bool> IsRenewalRequiredAsync
-            (IAcmeOptions options,
+        /// <returns>The cert if it is still valid according to rules in config. False otherwise.</returns>
+        private async Task<ICertificate> GetExistingCertificateAsync(
+            IAcmeOptions options,
             ICertificateRenewalOptions cfg,
             CancellationToken cancellationToken)
         {
@@ -89,12 +94,12 @@ namespace LetsEncrypt.Logic.Renewal
                     existingCert.Expires.Value.AddDays(-options.RenewXDaysBeforeExpiry) > now;
                 if (isValid)
                 {
-                    _log.LogInformation($"Certificate {existingCert.Name} (provider: {cfg.CertificateStore.Type}) is still valid until {existingCert.Expires.Value}. Skipping renewal.");
-                    return false;
+                    _log.LogInformation($"Certificate {existingCert.Name} (from source: {cert.Name}) is still valid until {existingCert.Expires.Value}. Skipping renewal.");
+                    return existingCert;
                 }
             }
             // either no cert or expired
-            return true;
+            return null;
         }
 
         /// <summary>
@@ -122,8 +127,7 @@ namespace LetsEncrypt.Logic.Renewal
             try
             {
                 // validate domain ownership
-                var responses = await ValidateDomainOwnershipAsync(challengeContexts, cancellationToken);
-                ThrowIfNotInStatus(ChallengeStatus.Valid, responses);
+                await ValidateDomainOwnershipAsync(challengeContexts, cancellationToken);
             }
             finally
             {
@@ -132,7 +136,7 @@ namespace LetsEncrypt.Logic.Renewal
             return order;
         }
 
-        private async Task<Challenge[]> ValidateDomainOwnershipAsync(IChallengeContext[] challengeContexts, CancellationToken cancellationToken)
+        private async Task ValidateDomainOwnershipAsync(IChallengeContext[] challengeContexts, CancellationToken cancellationToken)
         {
             // let Let's Encrypt know that they can verify the challenge
             await Task.WhenAll(challengeContexts.Select(c => c.Validate()));
@@ -153,8 +157,6 @@ namespace LetsEncrypt.Logic.Renewal
                 c.Status == ChallengeStatus.Processing));
 
             ThrowIfNotInStatus(ChallengeStatus.Valid, challengeResponses);
-
-            return challengeResponses;
         }
 
         private void ThrowIfNotInStatus(ChallengeStatus expectedStatus, Challenge[] challenges)
@@ -184,6 +186,9 @@ namespace LetsEncrypt.Logic.Renewal
             ICertificateRenewalOptions cfg,
             CancellationToken cancellationToken)
         {
+            var store = cfg.ParseCertificateStore();
+            _log.LogInformation($"Storing certificate in {store.Name}");
+
             // request certificate
             var key = KeyFactory.NewKey(KeyAlgorithm.RS256);
             await order.Finalize(new CsrInfo(), key);
@@ -191,10 +196,11 @@ namespace LetsEncrypt.Logic.Renewal
             var certChain = await order.Download();
             var builder = certChain.ToPfx(key);
             builder.FullChain = true;
-            var password = "";
-            var pfxBytes = builder.Build(string.Join(";", cfg.HostNames), password);
 
-            var store = cfg.ParseCertificateStore();
+            var bytes = new byte[32];
+            _randomGenerator.GetNonZeroBytes(bytes);
+            var password = Convert.ToBase64String(bytes);
+            var pfxBytes = builder.Build(string.Join(";", cfg.HostNames), password);
 
             return await store.UploadAsync(pfxBytes, password, cfg.HostNames, cancellationToken);
         }

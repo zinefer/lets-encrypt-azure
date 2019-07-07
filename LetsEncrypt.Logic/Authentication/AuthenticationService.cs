@@ -11,7 +11,7 @@ namespace LetsEncrypt.Logic.Authentication
     public class AuthenticationService : IAuthenticationService
     {
         private readonly IStorageProvider _storageProvider;
-        private const string AccountKeyFilenamePattern = "{0}--{1}.pem";
+        private const string AccountKeyFilenamePattern = "account-cache/{0}--{1}.pem";
         private readonly IAcmeContextFactory _contextFactory;
         private readonly IAcmeKeyFactory _keyFactory;
 

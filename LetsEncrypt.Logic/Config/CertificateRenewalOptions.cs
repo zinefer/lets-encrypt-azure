@@ -29,12 +29,17 @@ namespace LetsEncrypt.Logic.Config
 
         public async Task<IChallengeResponder> ParseChallengeResponderAsync(CancellationToken cancellationToken)
         {
-            switch (ChallengeResponder.Type.ToLowerInvariant())
+            var cr = ChallengeResponder ?? new GenericEntry
+            {
+                Type = "storageAccount",
+                Name = ParseCertificateStore().Name
+            };
+            switch (cr.Type.ToLowerInvariant())
             {
                 case "storageaccount":
-                    var props = ChallengeResponder.Properties?.ToObject<StorageProperties>() ?? new StorageProperties
+                    var props = cr.Properties?.ToObject<StorageProperties>() ?? new StorageProperties
                     {
-                        KeyVaultName = ChallengeResponder.Name
+                        KeyVaultName = cr.Name
                     };
                     var connectionString = props.ConnectionString;
                     if (string.IsNullOrEmpty(connectionString))
@@ -53,19 +58,25 @@ namespace LetsEncrypt.Logic.Config
                     var storage = new AzureBlobStorageProvider(connectionString, props.ContainerName);
                     return new AzureStorageHttpChallengeResponder(storage);
                 default:
-                    throw new NotImplementedException(ChallengeResponder.Type);
+                    throw new NotImplementedException(cr.Type);
             }
         }
 
         public ICertificateStore ParseCertificateStore()
         {
-            switch (CertificateStore.Type.ToLowerInvariant())
+            var store = CertificateStore ?? new GenericEntry
+            {
+                Type = "keyVault",
+                Name = ParseTargetResource().Name
+            };
+
+            switch (store.Type.ToLowerInvariant())
             {
                 case "keyvault":
                     // all optional
-                    var props = CertificateStore.Properties?.ToObject<KeyVaultProperties>() ?? new KeyVaultProperties
+                    var props = store.Properties?.ToObject<KeyVaultProperties>() ?? new KeyVaultProperties
                     {
-                        Name = CertificateStore.Name
+                        Name = store.Name
                     };
                     var certificateName = props.CertificateName;
                     if (string.IsNullOrEmpty(certificateName))
@@ -79,7 +90,7 @@ namespace LetsEncrypt.Logic.Config
                     var kvClient = GetKeyVaultClient();
                     return new KeyVaultCertificateStore(kvClient, keyVaultName, certificateName);
                 default:
-                    throw new NotImplementedException(CertificateStore.Type);
+                    throw new NotImplementedException(store.Type);
             }
         }
 

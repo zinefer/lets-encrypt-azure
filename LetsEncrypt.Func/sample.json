@@ -16,8 +16,8 @@
         {
             // a single cert with all these hostnames will be issued
             "hostNames": [
-                "marcstan.net",
-                "www.marcstan.net"
+                "example.com",
+                "www.example.com"
             ],
             // how to verify the LetsEncrypt challenge
             // defaults to assume static website via connectionString in keyvault secret
@@ -26,12 +26,15 @@
                 "properties": {
                     // assumes static website is enabled on the storage account by default
                     "container": "$web",
+                    // assumes standard letsencrypt folder 
                     "path": ".well-known/acme-challenge/",
-                    // auth: either directly connectionstring
+
+                    // auth: either directly embed connectionstring in config
                     "connectionString": "",
-                    // or (a bit more secure) via keyvault (MSI must be granted Get,List secrets access to the keyvault):
+                    // or (a bit more secure) via keyvault
+                    // (function app MSI must be granted Get,List secrets access to the keyvault):
                     // if keyVaultName not set, assumes same keyvault as in certificateStore section
-                    "keyVaultName": "marcstan",
+                    "keyVaultName": "example",
                     // must contain connection string to storage account
                     // defaults to name "Storage"
                     "secretName": "Storage"
@@ -43,50 +46,40 @@
                 "properties": {
                     // where to store the certificate upon creation
                     // uses name of targetResource if not set
-                    "name": "marcstan",
+                    "name": "example",
                     // defaults to first hostname with replace(".", "-") due to keyvault limitation 
-                    "certificateName": "marcstan-net"
+                    "certificateName": "example-com"
                 }
             },
             // the resource which will receive the certificate update
             "targetResource": {
                 // only supports cdn right now
                 "type": "cdn",
-                // if all property names are the same, may also use shortcut "name": "" next to type
+                // if all property names are the same, may also use shortcut "name": "cdn-name" next to type
                 "properties": {
                     // required, name of the cdn
-                    "name": "marcstan",
+                    "name": "example",
                     // defaults to name of cdn if not set
-                    "resourceGroupName": "marcstan",
+                    "resourceGroupName": "example",
                     // will look for all matching domains in the given endpoint of the CDN
                     // if not set looks for a single endpoint with the same name as the CDN
                     "endpoints": [
-                        "marcstan"
+                        "example"
                     ]
                 }
             }
         },
-        // identical to the one above due to fallbacks
+        // identical to the one above due to fallbacks replacing not set values in fallbackchain
         {
             "hostNames": [
-                "marcstan.net",
-                "www.marcstan.net"
+                "example.com",
+                "www.example.com"
             ],
-            // since all resources are named marcstan the config becomes very short as everything can use fallbacks
+            // since all resource(group)s are named identical ("example") the config becomes very short as everything can use fallbacks
             "targetResource": {
                 "type": "cdn",
                 // shortcut for setting all properties to same value
-                "name": "marcstan"
-            }
-        },
-        {
-            // will store secret "storage-marcstan-net" in keyvault
-            "hostNames": [
-                "storage.marcstan.net"
-            ],
-            "targetResource": {
-                "type": "cdn",
-                "name": "marcstan"
+                "name": "example"
             }
         }
     ]

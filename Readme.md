@@ -1,6 +1,11 @@
-# Azure function based Let's Encrypt automation (for Azure CDN)
+**This is currently under development and barely tested. Use at your own risk!**
+___
 
-Automatically issue SSL certificates for all your custom domain names assigned to Azure CDN.
+# Azure function based Let's Encrypt automation (Azure CDN only)
+
+Automatically issue SSL certificates for all your custom domain names.
+
+Usecase: Using a custom domain (especially root domain) is a bit tricky with Azure Storage (Static Websites) + Azure CDN right now. This aims to automate the certificate part.
 
 :warning: **Only supports Azure CDN right now**
 
@@ -20,9 +25,7 @@ There are 3 parts to getting this solution up and running:
 
 Prerequesite: A keyvault to store the certificates. If you need multiple certificates it is up to you whether you want to use a central keyvault or multiple. Personally I use one keyvault per project to have a clean seperation.
 
-(Personal recommendation: If you name Azure resources, name them all identical, e.g. resourcegroup "letsencrypt-func" -> azure function "letsencrypt-func", keyvault -> "letsencrypt-func", etc. The configuration has a fallback system, if most resources are named identical you only need to specify one and the rest are inferred).
-
-As per the CDN documentation:
+As per the CDN documentation (you can also find this documentation in the custom domain settings of Azure CDN endpoints):
 
 ```
 You need to setup the right permissions for CDN to access your Key vault:
@@ -36,17 +39,19 @@ Alternatively you can execute the same steps manually from your machine using Az
 
 ## Configure
 
-Along with the function app a storage account is created and the keyvault previously mentioned must exist.
+Along with the function app a storage account is created and the keyvault(s) previously mentioned must exist.
 
-They are used to store the metadata and certificates for the renewal process.
+The storage account is used to store the metadata and configuration for the renewal process (inside container `letsencrypt`).
 
-If the function was deployed successfully you can run it once manually. The storage account should then contain a container `letsencrypt` with a `config/sample.json` file (both will be automatically created by the function call if they don't exist yet).
+If the function was deployed successfully you can run it once manually (using the provided http function `execute`). The storage account should then contain a container `letsencrypt` with a `config/sample.json` file (both will be automatically created by the function call if they don't exist yet).
 
 The file contains comments and you should be able to add your own web apps and domains quite easily based on them.
 
 **Note:** The config/sample.json file is always ignored when generating certificates, you must use a different filename (e.g. config/my-domain.json).
 
-The azure function will have it's [managed identity](https://docs.microsoft.com/azure/active-directory/managed-identities-azure-resources/overview) enabled (service principal name will be the same as the function instance name). You need to grant it at least Get, List, Update and Import permissions for `Certificates` in all keyvaults that you intend to use.
+(Personal recommendation: If you name Azure resources, name them all identical, e.g. resourcegroup "letsencrypt-func" -> azure function "letsencrypt-func", keyvault -> "letsencrypt-func", etc. The configuration has a fallback system, if most resources are named identical you only need to specify one and the rest are inferred by the config fallback system).
+
+The azure function will have it's [managed identity](https://docs.microsoft.com/azure/active-directory/managed-identities-azure-resources/overview) enabled (service principal name will be the same as the function instance name). You need to grant it at least Get, List, Update and Import permissions for `Certificates` in all keyvaults that you intend to use for certificate storage.
 
 ## Run
 
