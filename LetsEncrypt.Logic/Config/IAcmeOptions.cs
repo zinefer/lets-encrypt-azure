@@ -17,6 +17,12 @@ namespace LetsEncrypt.Logic.Config
         string Email { get; }
 
         /// <summary>
+        /// Days before certificate expire when the renewal should occur.
+        /// Defaults to 30 days before expiry.
+        /// </summary>
+        int RenewXDaysBeforeExpiry { get; }
+
+        /// <summary>
         /// Uri of LetsEncrypt authority. See <see cref="WellKnownServers"/>.
         /// Will be set based on value of <see cref="Staging"/>
         /// </summary>

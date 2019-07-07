@@ -10,9 +10,13 @@ namespace LetsEncrypt.Tests
 
         public const string TestContainerName = "letsencrypt-tests";
 
-        public static IAcmeOptions GetStagingOptions() => new AcmeOptions(true, TestUser);
+        public static IAcmeOptions GetStagingOptions() => new AcmeOptions
+        {
+            Email = TestUser,
+            Staging = true
+        };
 
-        public static IAcmeOptions GetProductionOptions() => new AcmeOptions(false)
+        public static IAcmeOptions GetProductionOptions() => new AcmeOptions
         {
             Email = TestUser
         };

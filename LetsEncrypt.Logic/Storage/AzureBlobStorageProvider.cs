@@ -43,7 +43,7 @@ namespace LetsEncrypt.Logic.Storage
             do
             {
                 var r = await container.ListBlobsSegmentedAsync(prefix, token);
-                list.AddRange(r.Results.Select(b => b.Uri.GetLeftPart(UriPartial.Path).Substring(container.Uri.ToString().Length)));
+                list.AddRange(r.Results.Select(b => b.Uri.GetLeftPart(UriPartial.Path).Substring(container.Uri.ToString().Length + 1)));
                 token = r.ContinuationToken;
             }
             while (token != null);

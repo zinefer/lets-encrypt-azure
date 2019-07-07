@@ -20,7 +20,6 @@ namespace LetsEncrypt.Logic.Authentication
             IAcmeContextFactory contextFactory = null,
             IAcmeKeyFactory keyFactory = null)
         {
-            // TODO: use keyvault storage
             _storageProvider = storageProvider ?? throw new ArgumentNullException(nameof(storageProvider));
             _contextFactory = contextFactory ?? new AcmeContextFactory();
             _keyFactory = keyFactory ?? new AcmeKeyFactory();

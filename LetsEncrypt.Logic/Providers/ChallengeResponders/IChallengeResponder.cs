@@ -2,9 +2,9 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LetsEncrypt.Logic.Acme
+namespace LetsEncrypt.Logic.Providers.ChallengeResponders
 {
-    public interface IChallengeService
+    public interface IChallengeResponder
     {
         /// <summary>
         /// Allows selection and preparation of a challenge.

@@ -1,4 +1,3 @@
-using LetsEncrypt.Logic.Authentication;
 using LetsEncrypt.Logic.Config;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,10 +8,11 @@ namespace LetsEncrypt.Logic.Renewal
     {
         /// <summary>
         /// When called will generate ONE new certificate for the given set of hostnames.
+        /// This includes the verification with LetsEncrypt and the Azure resource update if necessary.
         /// </summary>
+        /// <param name="options"></param>
         /// <param name="cfg"></param>
-        /// <param name="authenticationContext"></param>
         /// <param name="cancellationToken"></param>
-        Task<RenewalResult> RenewCertificateAsync(CertificateConfiguration cfg, AuthenticationContext authenticationContext, CancellationToken cancellationToken);
+        Task<RenewalResult> RenewCertificateAsync(IAcmeOptions options, ICertificateRenewalOptions cfg, CancellationToken cancellationToken);
     }
 }

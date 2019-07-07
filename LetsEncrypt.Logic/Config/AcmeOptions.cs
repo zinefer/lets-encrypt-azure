@@ -1,4 +1,5 @@
 ﻿using Certes.Acme;
+using Newtonsoft.Json;
 using System;
 
 namespace LetsEncrypt.Logic.Config
@@ -8,21 +9,13 @@ namespace LetsEncrypt.Logic.Config
     /// </summary>
     public class AcmeOptions : IAcmeOptions
     {
-        public AcmeOptions(bool staging)
-        {
-            Staging = staging;
-        }
-
-        public AcmeOptions(bool staging, string email)
-        {
-            Staging = staging;
-            Email = email ?? throw new ArgumentNullException(nameof(email));
-        }
-
-        public bool Staging { get; }
+        public bool Staging { get; set; }
 
         public string Email { get; set; }
 
+        public int RenewXDaysBeforeExpiry { get; set; } = 30;
+
+        [JsonIgnore]
         public Uri CertificateAuthorityUri
             => Staging ? WellKnownServers.LetsEncryptStagingV2 : WellKnownServers.LetsEncryptV2;
     }

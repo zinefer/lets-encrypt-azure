@@ -6,17 +6,17 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LetsEncrypt.Logic.Acme
+namespace LetsEncrypt.Logic.Providers.ChallengeResponders
 {
     /// <summary>
     /// Implementation that persists http challenge files in an azure blob storage.
     /// Intended for static websites hosted in azure storage via '$web' container.
     /// </summary>
-    public class AzureStorageHttpChallengeService : IChallengeService
+    public class AzureStorageHttpChallengeResponder : IChallengeResponder
     {
         private readonly IStorageProvider _storageProvider;
 
-        public AzureStorageHttpChallengeService(IStorageProvider storageProvider)
+        public AzureStorageHttpChallengeResponder(IStorageProvider storageProvider)
         {
             _storageProvider = storageProvider ?? throw new ArgumentNullException(nameof(storageProvider));
         }

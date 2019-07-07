@@ -14,7 +14,7 @@ param(
     [string] $ResourceGroupName,
     [string] $ResourceGroupLocation = "westeurope",
     [ValidateSet("Complete", "Incremental")]
-    [string] $Mode = "Complete"
+    [string] $Mode = "Incremental"
 )
 $ErrorActionPreference = "Stop"
 

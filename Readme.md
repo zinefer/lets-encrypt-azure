@@ -14,13 +14,15 @@ This solution enables Azure CDN based domains to use LetsEncrypt certificates (A
 
 # Installation
 
-There are 3 parts to getting this solution up and running
+There are 3 parts to getting this solution up and running:
 
 ## Deploy
 
-Prerequesite: A keyvault to contain the certificates. It is up to you whether you want to use a central keyvault or multiples. Personally I use one keyvault per project to have a clean seperation.
+Prerequesite: A keyvault to store the certificates. If you need multiple certificates it is up to you whether you want to use a central keyvault or multiple. Personally I use one keyvault per project to have a clean seperation.
 
-As per the CDN documentation: 
+(Personal recommendation: If you name Azure resources, name them all identical, e.g. resourcegroup "letsencrypt-func" -> azure function "letsencrypt-func", keyvault -> "letsencrypt-func", etc. The configuration has a fallback system, if most resources are named identical you only need to specify one and the rest are inferred).
+
+As per the CDN documentation:
 
 ```
 You need to setup the right permissions for CDN to access your Key vault:
@@ -38,9 +40,11 @@ Along with the function app a storage account is created and the keyvault previo
 
 They are used to store the metadata and certificates for the renewal process.
 
-If the function was deployed successfully it will [run once automatically](https://docs.microsoft.com/en-us/Azure/azure-functions/functions-manually-run-non-http). The storage account should then contain a container `letsencrypt` with a `config/sample.json` file (both will be automatically created by the function call if they don't exist yet).
+If the function was deployed successfully you can run it once manually. The storage account should then contain a container `letsencrypt` with a `config/sample.json` file (both will be automatically created by the function call if they don't exist yet).
 
 The file contains comments and you should be able to add your own web apps and domains quite easily based on them.
+
+**Note:** The config/sample.json file is always ignored when generating certificates, you must use a different filename (e.g. config/my-domain.json).
 
 The azure function will have it's [managed identity](https://docs.microsoft.com/azure/active-directory/managed-identities-azure-resources/overview) enabled (service principal name will be the same as the function instance name). You need to grant it at least Get, List, Update and Import permissions for `Certificates` in all keyvaults that you intend to use.
 
@@ -55,9 +59,3 @@ For the function to succeed a few conditions must be met:
 If everything is setup correctly the function should create certificates in the keyvault after a successful run and attach them to the CDN/update them when needed.
 
 Note that the CDN update can take up to 6 hours until the certificate is used and you can see the progress in the CDN -> Endpoints section.
-
-Also note, when you update a certificate the custom domain progress page will be in progress with no `certificate management type` selected:
-
-![provisioning](./screenshots/provisioning.png)
-
-This is just a visual bug, the `use my own certificate` type will be reselected (visually) once the process has finished.
