@@ -1,4 +1,5 @@
-﻿using LetsEncrypt.Logic.Extensions;
+﻿using LetsEncrypt.Logic.Authentication;
+using LetsEncrypt.Logic.Extensions;
 using LetsEncrypt.Logic.Providers.CertificateStores;
 using Microsoft.Azure.Services.AppAuthentication;
 using Newtonsoft.Json;

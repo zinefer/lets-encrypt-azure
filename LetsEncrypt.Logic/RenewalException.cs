@@ -1,7 +1,7 @@
 ﻿using Certes.Acme;
 using System;
 
-namespace LetsEncrypt.Logic.Renewal
+namespace LetsEncrypt.Logic
 {
     [Serializable]
     public class RenewalException : Exception

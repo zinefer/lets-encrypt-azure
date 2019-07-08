@@ -1,6 +1,6 @@
+using LetsEncrypt.Logic;
 using LetsEncrypt.Logic.Authentication;
 using LetsEncrypt.Logic.Config;
-using LetsEncrypt.Logic.Renewal;
 using LetsEncrypt.Logic.Storage;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;

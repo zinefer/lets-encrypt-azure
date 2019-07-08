@@ -12,7 +12,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LetsEncrypt.Logic.Renewal
+namespace LetsEncrypt.Logic
 {
     public class RenewalService : IRenewalService
     {

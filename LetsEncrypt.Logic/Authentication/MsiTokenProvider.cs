@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LetsEncrypt.Logic
+namespace LetsEncrypt.Logic.Authentication
 {
     public class MsiTokenProvider : DelegatingHandler
     {

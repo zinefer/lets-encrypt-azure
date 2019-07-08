@@ -1,4 +1,4 @@
-﻿namespace LetsEncrypt.Logic.Renewal
+﻿namespace LetsEncrypt.Logic
 {
     public enum RenewalResult
     {
