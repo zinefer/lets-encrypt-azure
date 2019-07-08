@@ -7,6 +7,7 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -53,12 +54,16 @@ namespace LetsEncrypt.Func
             IAuthenticationService authenticationService = new AuthenticationService(storageProvider);
 
             IRenewalService renewalService = new RenewalService(authenticationService, log);
+            var stopwatch = new Stopwatch();
+            // TODO: with lots of certificate renewals this will run into function timeout (10mins)
+            // with 30 days to expiry (default setting) this isn't a big problem as next day all finished certs are skipped
             foreach ((var name, var config) in configurations)
             {
                 using (log.BeginScope($"Working on certificates from {name}"))
                 {
                     foreach (var cert in config.Certificates)
                     {
+                        stopwatch.Restart();
                         var hostNames = string.Join(";", cert.HostNames);
                         try
                         {
@@ -79,6 +84,7 @@ namespace LetsEncrypt.Func
                         {
                             log.LogError(e, $"Certificate renewal failed for: {hostNames}!");
                         }
+                        log.LogInformation($"Renewing certificates for {hostNames} took: {stopwatch.Elapsed}");
                     }
                 }
             }
