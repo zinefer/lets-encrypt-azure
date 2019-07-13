@@ -61,8 +61,10 @@ namespace LetsEncrypt.Tests
         [Test]
         public async Task ShouldLoadExistingAccountIfCached()
         {
-            const string accountFilename = "totally my account.pem";
             const string keyInPemFormat = "--- not actually a pem ---";
+
+            var options = TestHelper.GetStagingOptions();
+            var accountFilename = $"{options.CertificateAuthorityUri.Host}--{options.Email}.pem";
 
             // arrange
 
@@ -70,9 +72,9 @@ namespace LetsEncrypt.Tests
             var storageMock = new Mock<IStorageProvider>();
             storageMock.Setup(x => x.Escape(It.IsAny<string>()))
                 .Returns(accountFilename);
-            storageMock.Setup(x => x.ExistsAsync(accountFilename, It.IsAny<CancellationToken>()))
+            storageMock.Setup(x => x.ExistsAsync("account/" + accountFilename, It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(true));
-            storageMock.Setup(x => x.GetAsync(accountFilename, It.IsAny<CancellationToken>()))
+            storageMock.Setup(x => x.GetAsync("account/" + accountFilename, It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(keyInPemFormat));
 
             var keyMock = new Mock<IKey>();
@@ -90,8 +92,6 @@ namespace LetsEncrypt.Tests
             keyFactoryMock.Setup(x => x.FromPem(keyInPemFormat))
                 .Returns(keyMock.Object);
 
-            var options = TestHelper.GetStagingOptions();
-
             IAuthenticationService authenticationService = new AuthenticationService(storageMock.Object, contextFactoryMock.Object, keyFactoryMock.Object);
 
             // act
@@ -103,7 +103,7 @@ namespace LetsEncrypt.Tests
             context.Options.Should().Be(options);
 
             // account was read from disk
-            storageMock.Verify(x => x.GetAsync(accountFilename, It.IsAny<CancellationToken>()));
+            storageMock.Verify(x => x.GetAsync("account/" + accountFilename, It.IsAny<CancellationToken>()));
             // account was restored from key
             contextFactoryMock.Verify(x => x.GetContext(options.CertificateAuthorityUri, keyMock.Object));
             // key was not written back to storage
