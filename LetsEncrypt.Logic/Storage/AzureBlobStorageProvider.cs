@@ -37,7 +37,7 @@ namespace LetsEncrypt.Logic.Storage
         }
 
         public string Escape(string fileName)
-            => Uri.EscapeDataString(fileName);
+            => fileName;
 
         public async Task<bool> ExistsAsync(
             string fileName,

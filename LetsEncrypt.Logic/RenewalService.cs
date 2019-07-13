@@ -19,18 +19,21 @@ namespace LetsEncrypt.Logic
         private readonly ILogger _log;
         private readonly IAuthenticationService _authenticationService;
         private static readonly RNGCryptoServiceProvider _randomGenerator = new RNGCryptoServiceProvider();
+        private readonly IRenewalOptionParser _renewalOptionParser;
 
         public RenewalService(
             IAuthenticationService authenticationService,
+            IRenewalOptionParser renewalOptionParser,
             ILogger log)
         {
             _authenticationService = authenticationService ?? throw new ArgumentNullException(nameof(authenticationService));
+            _renewalOptionParser = renewalOptionParser ?? throw new ArgumentNullException(nameof(renewalOptionParser));
             _log = log ?? throw new ArgumentNullException(nameof(log));
         }
 
         public async Task<RenewalResult> RenewCertificateAsync(
             IAcmeOptions options,
-            ICertificateRenewalOptions cfg,
+            CertificateRenewalOptions cfg,
             CancellationToken cancellationToken)
         {
             if (options == null)
@@ -56,7 +59,7 @@ namespace LetsEncrypt.Logic
             cert = await GenerateAndStoreCertificateAsync(order, cfg, cancellationToken);
 
             // 4. update Azure resource
-            var resource = cfg.ParseTargetResource();
+            var resource = _renewalOptionParser.ParseTargetResource(cfg);
             await resource.UpdateAsync(cert, cancellationToken);
 
             return RenewalResult.Success;
@@ -71,10 +74,10 @@ namespace LetsEncrypt.Logic
         /// <returns>The cert if it is still valid according to rules in config. False otherwise.</returns>
         private async Task<ICertificate> GetExistingCertificateAsync(
             IAcmeOptions options,
-            ICertificateRenewalOptions cfg,
+            CertificateRenewalOptions cfg,
             CancellationToken cancellationToken)
         {
-            var cert = cfg.ParseCertificateStore();
+            var cert = _renewalOptionParser.ParseCertificateStore(cfg);
 
             // determine if renewal is needed based on existing cert
             var existingCert = await cert.GetCertificateAsync(cancellationToken);
@@ -111,13 +114,13 @@ namespace LetsEncrypt.Logic
         /// <returns>Returns the context, ready to generate certificate from.</returns>
         private async Task<IOrderContext> ValidateOrderAsync(
             IAcmeOptions options,
-            ICertificateRenewalOptions cfg,
+            CertificateRenewalOptions cfg,
             CancellationToken cancellationToken)
         {
             var authenticationContext = await _authenticationService.AuthenticateAsync(options, cancellationToken);
             var order = await authenticationContext.AcmeContext.NewOrder(cfg.HostNames);
 
-            var challenge = await cfg.ParseChallengeResponderAsync(cancellationToken);
+            var challenge = await _renewalOptionParser.ParseChallengeResponderAsync(cfg, cancellationToken);
 
             var challengeContexts = await challenge.InitiateChallengesAsync(order, cancellationToken);
 
@@ -183,10 +186,10 @@ namespace LetsEncrypt.Logic
         /// <returns>Returns metadata about the certificate.</returns>
         private async Task<ICertificate> GenerateAndStoreCertificateAsync(
             IOrderContext order,
-            ICertificateRenewalOptions cfg,
+            CertificateRenewalOptions cfg,
             CancellationToken cancellationToken)
         {
-            var store = cfg.ParseCertificateStore();
+            var store = _renewalOptionParser.ParseCertificateStore(cfg);
             _log.LogInformation($"Storing certificate in {store.Name}");
 
             // request certificate

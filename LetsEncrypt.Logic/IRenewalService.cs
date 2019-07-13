@@ -13,6 +13,6 @@ namespace LetsEncrypt.Logic
         /// <param name="options"></param>
         /// <param name="cfg"></param>
         /// <param name="cancellationToken"></param>
-        Task<RenewalResult> RenewCertificateAsync(IAcmeOptions options, ICertificateRenewalOptions cfg, CancellationToken cancellationToken);
+        Task<RenewalResult> RenewCertificateAsync(IAcmeOptions options, CertificateRenewalOptions cfg, CancellationToken cancellationToken);
     }
 }

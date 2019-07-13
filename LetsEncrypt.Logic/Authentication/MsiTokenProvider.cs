@@ -12,6 +12,13 @@ namespace LetsEncrypt.Logic.Authentication
         private readonly Func<HttpRequestMessage, string> _resourceProvider;
         private readonly string _tenant;
 
+        /// <summary>
+        /// Wrapper to authenticate against a specific endpoint.
+        /// </summary>
+        /// <param name="tokenProvider"></param>
+        /// <param name="tenant">The tenant where to login.</param>
+        /// <param name="resourceProvider">Func that is called for each request. It must return the correct resource for the given request,
+        /// resource will be passed to <see cref="AzureServiceTokenProvider.GetAuthenticationResultAsync(string, string, CancellationToken)"/></param>
         public MsiTokenProvider(AzureServiceTokenProvider tokenProvider, string tenant, Func<HttpRequestMessage, string> resourceProvider)
             : base(new HttpClientHandler())
         {

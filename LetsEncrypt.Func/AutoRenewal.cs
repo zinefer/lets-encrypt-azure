@@ -52,11 +52,14 @@ namespace LetsEncrypt.Func
             IConfigurationProcessor processor = new ConfigurationProcessor();
             var configurations = await LoadConfigFilesAsync(storageProvider, processor, log, cancellationToken);
             IAuthenticationService authenticationService = new AuthenticationService(storageProvider);
+            var az = new AzureHelper();
+            var renewalOptionsParser = new RenewalOptionParser(az);
 
-            IRenewalService renewalService = new RenewalService(authenticationService, log);
+            IRenewalService renewalService = new RenewalService(authenticationService, renewalOptionsParser, log);
             var stopwatch = new Stopwatch();
-            // TODO: with lots of certificate renewals this will run into function timeout (10mins)
+            // TODO: with lots of certificate renewals this could run into function timeout (10mins)
             // with 30 days to expiry (default setting) this isn't a big problem as next day all finished certs are skipped
+            // user will only get email <= 14 days before expiry so acceptable for now
             foreach ((var name, var config) in configurations)
             {
                 using (log.BeginScope($"Working on certificates from {name}"))
@@ -88,6 +91,10 @@ namespace LetsEncrypt.Func
                     }
                 }
             }
+            if (!configurations.Any())
+            {
+                log.LogWarning("No configurations where processed, refere to the sample on how to set up configs!");
+            }
         }
 
         private static async Task<IEnumerable<(string configName, Configuration)>> LoadConfigFilesAsync(IStorageProvider storageProvider,
@@ -115,6 +122,7 @@ namespace LetsEncrypt.Func
             }
             if (!paths.Any())
             {
+                log.LogWarning("No config files found. Placing config/sample.json in storage!");
                 var content = await File.ReadAllTextAsync("sample.json", cancellationToken);
                 await storageProvider.SetAsync("config/sample.json", content, cancellationToken);
             }

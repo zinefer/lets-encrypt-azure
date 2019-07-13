@@ -17,9 +17,11 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
     {
         private readonly string _resourceGroupName;
         private readonly string[] _endpoints;
+        private readonly IAzureHelper _azureHelper;
 
-        public CdnTargetResoure(string resourceGroupName, string name, string[] endpoints)
+        public CdnTargetResoure(IAzureHelper azureHelper, string resourceGroupName, string name, string[] endpoints)
         {
+            _azureHelper = azureHelper ?? throw new ArgumentNullException(nameof(azureHelper));
             _resourceGroupName = resourceGroupName ?? throw new ArgumentNullException(nameof(resourceGroupName));
             Name = name ?? throw new ArgumentNullException(nameof(name));
             _endpoints = endpoints ?? throw new ArgumentNullException(nameof(endpoints));
@@ -29,12 +31,13 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
 
         public async Task UpdateAsync(ICertificate cert, CancellationToken cancellationToken)
         {
-            // TODO: use fluent api once available (mgmt api preview package already offers new endpoints, but fluent api does not)
-            // also problematic: fluent api MSI did not provide fallback for local user (requiring MSI_ENDPOINT env variable)
+            // use REST directly because nuget packages don't contain the required endpoint to update CDN yet
+            // fluent api would be nicer to use (mgmt api preview package already offers new endpoints, but fluent api does not)
+            // but problematic: neither api supports fallback from MSI to local user (both requiring MSI_ENDPOINT env variable)
+            // see https://github.com/Azure/azure-libraries-for-net/issues/585
 
             var tokenProvider = new AzureServiceTokenProvider();
-            var az = new AzureWorkarounds();
-            var tenantId = await az.GetTenantIdAsync(cancellationToken);
+            var tenantId = await _azureHelper.GetTenantIdAsync(cancellationToken);
             // only allow connections to management API with this provider
             // we only use it to update CDN after cert deployment
             const string msiTokenprovider = "https://management.azure.com/";
@@ -51,7 +54,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             // => don't want to break that either..
 
             var listEndpointUrl = "https://management.azure.com" +
-                    $"/subscriptions/{az.GetSubscriptionId()}/" +
+                    $"/subscriptions/{_azureHelper.GetSubscriptionId()}/" +
                     $"resourceGroups/{_resourceGroupName}/" +
                     $"providers/Microsoft.Cdn/profiles/{Name}/endpoints?api-version=2019-04-15";
 
@@ -100,7 +103,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
                 // https://github.com/Azure/azure-rest-api-specs/blob/master/specification/cdn/resource-manager/Microsoft.Cdn/stable/2019-04-15/examples/CustomDomains_EnableCustomHttpsUsingBYOC.json
 
                 var url = "https://management.azure.com" +
-                    $"/subscriptions/{az.GetSubscriptionId()}/" +
+                    $"/subscriptions/{_azureHelper.GetSubscriptionId()}/" +
                     $"resourceGroups/{_resourceGroupName}/" +
                     $"providers/Microsoft.Cdn/profiles/{Name}/" +
                     $"endpoints/{endpoint.name}/customDomains/" +
@@ -118,7 +121,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
                         ResourceGroupName = _resourceGroupName,
                         SecretName = cert.Name,
                         SecretVersion = cert.Version,
-                        SubscriptionId = az.GetSubscriptionId(),
+                        SubscriptionId = _azureHelper.GetSubscriptionId(),
                         VaultName = cert.Origin
                     }
                 }, settings);

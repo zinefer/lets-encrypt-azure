@@ -21,7 +21,7 @@ namespace LetsEncrypt.Tests
                 const string fakeSubscriptionId = "68373267-6C36-4B66-B92F-F124A23E313E";
                 Environment.SetEnvironmentVariable("subscriptionId", fakeSubscriptionId);
 
-                var az = new AzureWorkarounds();
+                var az = new AzureHelper();
                 az.GetSubscriptionId().Should().Be(fakeSubscriptionId);
             }
             finally
@@ -35,7 +35,7 @@ namespace LetsEncrypt.Tests
         {
             Environment.SetEnvironmentVariable("subscriptionId", null);
 
-            var az = new AzureWorkarounds();
+            var az = new AzureHelper();
             new Action(() => az.GetSubscriptionId()).Should().Throw<ArgumentException>();
         }
 
@@ -59,7 +59,7 @@ namespace LetsEncrypt.Tests
                         $"authorization_uri=\"https://login.windows.net/{fakeTenantId}\", error=\"invalid_token\", error_description=\"The authentication failed because of missing 'Authorization' header.\""));
                     return resp;
                 });
-                var az = new AzureWorkarounds(mock);
+                var az = new AzureHelper(mock);
                 Environment.SetEnvironmentVariable("subscriptionId", fakeSubscriptionId);
 
                 // act + verify
