@@ -101,3 +101,23 @@ stages:
         appName: '$(ResourceGroupName)'
         package: '$(System.ArtifactsDirectory)/LetsEncrypt.Func'
         deploymentMethod: runFromPackage
+
+  - job: integration
+    pool:
+      name: 'Hosted Windows 2019 with VS2019'
+    variables:
+      ResourceGroupName: 'letsencrypt-integration'
+
+    steps:
+    - task: DownloadPipelineArtifact@1
+      inputs:
+        artifactName: deploy
+        targetPath: '$(System.ArtifactsDirectory)'
+
+    - task: AzurePowerShell@4
+      displayName: 'Deploy'
+      inputs:
+        azureSubscription: 'Opensource Deployments'
+        ScriptPath: '$(System.ArtifactsDirectory)/Deploy.ps1'
+        ScriptArguments: '-ResourceGroupName $(ResourceGroupName) -File integration.json'
+        azurePowerShellVersion: LatestVersion

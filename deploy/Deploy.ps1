@@ -14,7 +14,8 @@ param(
     [string] $ResourceGroupName,
     [string] $ResourceGroupLocation = "westeurope",
     [ValidateSet("Complete", "Incremental")]
-    [string] $Mode = "Incremental"
+    [string] $Mode = "Incremental",
+    [string] $File = "deploy.json"
 )
 $ErrorActionPreference = "Stop"
 
@@ -30,7 +31,7 @@ if ($ResourceGroup -eq $null) {
 
 Write-Output "Deploying to resourcegroup $ResourceGroupName"
 
-$templateFile = Join-Path $PSScriptRoot "deploy.json"
+$templateFile = Join-Path $PSScriptRoot $File
 $parameters = @{}
 
 New-AzResourceGroupDeployment `

@@ -1,0 +1,211 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "domain": {
+            "type": "string",
+            "defaultValue": "marcstan.net"
+        },
+        "region": {
+            "type": "string",
+            "defaultValue": "z6"
+        }
+    },
+    "variables": {
+        "storageAccountName": "[toLower(replace(resourceGroup().name, '-', ''))]",
+        "cdnName": "[toLower(resourceGroup().name)]",
+        "endpointName": "[toLower(resourceGroup().name)]",
+        "storageAccountName2": "[toLower(concat(replace(resourceGroup().name, '-', ''), '02'))]",
+        "cdnName2": "[toLower(concat(resourceGroup().name, '-02'))]",
+        "endpointName2": "[toLower(concat(resourceGroup().name, '-02'))]",
+        "storageAccountName3": "[toLower(concat(replace(resourceGroup().name, '-', ''), '03'))]",
+        "cdnName3": "[toLower(concat(resourceGroup().name, '-03'))]",
+        "endpointName3": "[toLower(concat(resourceGroup().name, '-03'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "kind": "StorageV2",
+            "name": "[variables('storageAccountName')]",
+            "apiVersion": "2018-07-01",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "properties": {
+                "supportsHttpsTrafficOnly": false,
+                "accessTier": "Hot"
+            },
+            "dependsOn": []
+        },
+        {
+            "name": "[variables('cdnName')]",
+            "type": "Microsoft.Cdn/profiles",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2016-04-02",
+            "sku": {
+                "name": "Premium_Verizon"
+            },
+            "dependsOn": [
+                "[variables('storageAccountName')]"
+            ],
+            "resources": [
+                {
+                    "apiVersion": "2016-04-02",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Cdn/profiles', variables('cdnName'))]"
+                    ],
+                    "location": "[resourceGroup().location]",
+                    "name": "[variables('endpointName')]",
+                    "type": "endpoints",
+                    "properties": {
+                        "originHostHeader": "[concat(variables('endpointName'), parameter('region'), '.web.core.windows.net')]",
+                        "isHttpAllowed": true,
+                        "isHttpsAllowed": true,
+                        "queryStringCachingBehavior": "IgnoreQueryString",
+                        "contentTypesToCompress": [
+                            "text/plain",
+                            "text/html",
+                            "text/css",
+                            "application/x-javascript",
+                            "text/javascript"
+                        ],
+                        "isCompressionEnabled": true,
+                        "origins": [
+                            {
+                                "name": "origin1",
+                                "properties": {
+                                    "hostName": "[concat(variables('endpointName'), '.', parameters('domain'))]"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "kind": "StorageV2",
+            "name": "[variables('storageAccountName2')]",
+            "apiVersion": "2018-07-01",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "properties": {
+                "supportsHttpsTrafficOnly": false,
+                "accessTier": "Hot"
+            }
+        },
+        {
+            "name": "[variables('cdnName2')]",
+            "type": "Microsoft.Cdn/profiles",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2016-04-02",
+            "sku": {
+                "name": "Premium_Verizon"
+            },
+            "dependsOn": [
+                "[variables('storageAccountName2')]"
+            ],
+            "resources": [
+                {
+                    "apiVersion": "2016-04-02",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Cdn/profiles', variables('cdnName2'))]"
+                    ],
+                    "location": "[resourceGroup().location]",
+                    "name": "[variables('endpointName2')]",
+                    "type": "endpoints",
+                    "properties": {
+                        "originHostHeader": "[concat(variables('endpointName2'), parameter('region'), '.web.core.windows.net')]",
+                        "isHttpAllowed": true,
+                        "isHttpsAllowed": true,
+                        "queryStringCachingBehavior": "IgnoreQueryString",
+                        "contentTypesToCompress": [
+                            "text/plain",
+                            "text/html",
+                            "text/css",
+                            "application/x-javascript",
+                            "text/javascript"
+                        ],
+                        "isCompressionEnabled": true,
+                        "origins": [
+                            {
+                                "name": "origin1",
+                                "properties": {
+                                    "hostName": "[concat(variables('endpointName2'), '.', parameters('domain'))]"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "kind": "StorageV2",
+            "name": "[variables('storageAccountName3')]",
+            "apiVersion": "2018-07-01",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "properties": {
+                "supportsHttpsTrafficOnly": false,
+                "accessTier": "Hot"
+            }
+        },
+        {
+            "name": "[variables('cdnName3')]",
+            "type": "Microsoft.Cdn/profiles",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2016-04-02",
+            "sku": {
+                "name": "Premium_Verizon"
+            },
+            "dependsOn": [
+                "[variables('storageAccountName3')]"
+            ],
+            "resources": [
+                {
+                    "apiVersion": "2016-04-02",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Cdn/profiles', variables('cdnName3'))]"
+                    ],
+                    "location": "[resourceGroup().location]",
+                    "name": "[variables('endpointName3')]",
+                    "type": "endpoints",
+                    "properties": {
+                        "originHostHeader": "[concat(variables('endpointName3'), parameter('region'), '.web.core.windows.net')]",
+                        "isHttpAllowed": true,
+                        "isHttpsAllowed": true,
+                        "queryStringCachingBehavior": "IgnoreQueryString",
+                        "contentTypesToCompress": [
+                            "text/plain",
+                            "text/html",
+                            "text/css",
+                            "application/x-javascript",
+                            "text/javascript"
+                        ],
+                        "isCompressionEnabled": true,
+                        "origins": [
+                            {
+                                "name": "origin1",
+                                "properties": {
+                                    "hostName": "[concat(variables('endpointName3'),  '.', parameters('domain'))]"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,69 @@
+{
+    "acme": {
+        "email": "marcstan@live.com",
+        "renewXDaysBeforeExpiry": 30,
+        "staging": true
+    },
+    "certificates": [
+        // full fallback system should work when all resources are named identical + MSI storage access
+        {
+            "hostNames": [
+                "letsencrypt-integration.marcstan.net"
+            ],
+            "targetResource": {
+                "type": "cdn",
+                "name": "letsencrypt-integration"
+            }
+        },
+        // some resource names + MSI storage access
+        {
+            "hostNames": [
+                "letsencrypt-integration-02.marcstan.net"
+            ],
+            "certificateStore": {
+                "type": "keyVault",
+                "properties": {
+                    "name": "letsencrypt-integration"
+                }
+            },
+            "targetResource": {
+                "type": "cdn",
+                "properties": {
+                    "name": "letsencrypt-integration-02",
+                    "resourceGroupName": "letsencrypt-integration"
+                }
+            }
+        },
+        // everything specified explicitely + connection string in keyvault (MSI should be tried, fails and falls back to keyvault)
+        {
+            "hostNames": [
+                "letsencrypt-integration-03.marcstan.net"
+            ],
+            "challengeResponder": {
+                "type": "storageAccount",
+                "properties": {
+                    "container": "$web",
+                    "path": ".well-known/acme-challenge/",
+                    "keyVaultName": "letsencrypt-integration"
+                }
+            },
+            "certificateStore": {
+                "type": "keyVault",
+                "properties": {
+                    "name": "letsencrypt-integration",
+                    "certificateName": "letsencrypt-integration-03-marcstan-net"
+                }
+            },
+            "targetResource": {
+                "type": "cdn",
+                "properties": {
+                    "name": "letsencrypt-integration-03",
+                    "resourceGroupName": "letsencrypt-integration",
+                    "endpoints": [
+                        "letsencrypt-integration-03"
+                    ]
+                }
+            }
+        }
+    ]
+}
