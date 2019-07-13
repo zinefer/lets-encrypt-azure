@@ -5,7 +5,9 @@ using LetsEncrypt.Logic.Providers.ChallengeResponders;
 using LetsEncrypt.Logic.Providers.TargetResources;
 using LetsEncrypt.Logic.Storage;
 using Microsoft.Azure.KeyVault;
+using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.WindowsAzure.Storage.Auth;
 using System;
 using System.Linq;
 using System.Threading;
@@ -39,23 +41,34 @@ namespace LetsEncrypt.Logic.Config
                 case "storageaccount":
                     var props = cr.Properties?.ToObject<StorageProperties>() ?? new StorageProperties
                     {
-                        KeyVaultName = cr.Name
+                        KeyVaultName = cr.Name,
+                        AccountName = cr.Name
                     };
+
+                    // try MSI first, must do check if we can read to know if we have access
+                    var accountName = props.AccountName;
+                    if (string.IsNullOrEmpty(accountName))
+                        accountName = ParseCertificateStore().Name;
+
+                    var provider = new AzureServiceTokenProvider();
+                    var tokenAndFrequency = await StorageMsiTokenRenewerAsync(provider, cancellationToken);
+                    var token = new TokenCredential(tokenAndFrequency.Token, StorageMsiTokenRenewerAsync, provider, tokenAndFrequency.Frequency.Value);
+                    var storage = new AzureBlobStorageProvider(token, accountName, props.ContainerName);
+
                     var connectionString = props.ConnectionString;
-                    if (string.IsNullOrEmpty(connectionString))
+                    if (!string.IsNullOrEmpty(connectionString))
+                    {
+                        storage = new AzureBlobStorageProvider(connectionString, props.ContainerName);
+                    }
+                    else
                     {
                         // falback to secret in keyvault
-                        var kvClient = GetKeyVaultClient();
                         var keyVaultName = props.KeyVaultName;
                         if (string.IsNullOrEmpty(keyVaultName))
-                        {
-                            var certStore = ParseCertificateStore();
-                            keyVaultName = certStore.Name;
-                        }
-                        var secret = await kvClient.GetSecretAsync($"https://{keyVaultName}.vault.azure.net", props.SecretName, cancellationToken);
-                        connectionString = secret.Value;
+                            keyVaultName = ParseCertificateStore().Name;
+
+                        connectionString = await GetSecretAsync(keyVaultName, props.SecretName, cancellationToken);
                     }
-                    var storage = new AzureBlobStorageProvider(connectionString, props.ContainerName);
                     return new AzureStorageHttpChallengeResponder(storage);
                 default:
                     throw new NotImplementedException(cr.Type);
@@ -87,8 +100,7 @@ namespace LetsEncrypt.Logic.Config
                         var target = ParseTargetResource();
                         keyVaultName = target.Name;
                     }
-                    var kvClient = GetKeyVaultClient();
-                    return new KeyVaultCertificateStore(kvClient, keyVaultName, certificateName);
+                    return new KeyVaultCertificateStore(GetKeyVaultClient(), keyVaultName, certificateName);
                 default:
                     throw new NotImplementedException(store.Type);
             }
@@ -128,6 +140,35 @@ namespace LetsEncrypt.Logic.Config
         {
             var tokenProvider = new AzureServiceTokenProvider();
             return new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback));
+        }
+
+        private async Task<string> GetSecretAsync(string keyVaultName, string secretName, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var secret = await GetKeyVaultClient().GetSecretAsync($"https://{keyVaultName}.vault.azure.net", secretName, cancellationToken);
+                return secret.Value;
+            }
+            catch (KeyVaultErrorException ex)
+            {
+                if (ex.Response.StatusCode == System.Net.HttpStatusCode.NotFound ||
+                    ex.Body.Error.Code == "SecretNotFound")
+                    return null;
+
+                throw;
+            }
+        }
+
+        private static async Task<NewTokenAndFrequency> StorageMsiTokenRenewerAsync(Object state, CancellationToken cancellationToken)
+        {
+            var az = new AzureWorkarounds();
+            const string StorageResource = "https://storage.azure.com/";
+            var authResult = await ((AzureServiceTokenProvider)state).GetAuthenticationResultAsync(StorageResource, await az.GetTenantIdAsync(cancellationToken), cancellationToken);
+            var next = authResult.ExpiresOn - DateTimeOffset.UtcNow - TimeSpan.FromMinutes(5);
+            if (next.Ticks < 0)
+                next = default;
+
+            return new NewTokenAndFrequency(authResult.AccessToken, next);
         }
     }
 }

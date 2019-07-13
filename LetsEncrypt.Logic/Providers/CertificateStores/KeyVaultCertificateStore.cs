@@ -12,7 +12,8 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
         private readonly IKeyVaultClient _keyVaultClient;
         private readonly string _certificateName;
 
-        public KeyVaultCertificateStore(IKeyVaultClient keyVaultClient,
+        public KeyVaultCertificateStore(
+            IKeyVaultClient keyVaultClient,
             string keyVaultName,
             string certificateName)
         {

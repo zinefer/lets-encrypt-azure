@@ -1,4 +1,5 @@
 ﻿using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Blob;
 using System;
 using System.Collections.Generic;
@@ -11,15 +12,27 @@ namespace LetsEncrypt.Logic.Storage
 {
     public class AzureBlobStorageProvider : IStorageProvider
     {
-        private readonly CloudBlobClient _blobClient;
-        private readonly string _container;
+        private CloudBlobClient _blobClient;
+        private string _container;
 
         public AzureBlobStorageProvider(
             string connectionString,
             string container)
         {
             var storageClient = CloudStorageAccount.Parse(connectionString ?? throw new ArgumentNullException(nameof(connectionString)));
-            _blobClient = storageClient.CreateCloudBlobClient();
+            Setup(storageClient, container);
+        }
+
+        public AzureBlobStorageProvider(TokenCredential msiCredentials, string account, string container)
+        {
+            var cred = new StorageCredentials(msiCredentials ?? throw new ArgumentNullException(nameof(msiCredentials)));
+            var storageClient = new CloudStorageAccount(cred, account, null, true);
+            Setup(storageClient, container);
+        }
+
+        private void Setup(CloudStorageAccount account, string container)
+        {
+            _blobClient = account.CreateCloudBlobClient();
             _container = container ?? throw new ArgumentNullException(nameof(container));
         }
 
