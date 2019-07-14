@@ -61,27 +61,32 @@
                     "name": "[variables('endpointName')]",
                     "type": "endpoints",
                     "properties": {
-                        "originHostHeader": "[concat(variables('endpointName'), parameter('region'), '.web.core.windows.net')]",
+                        "originHostHeader": "[concat(variables('storageAccountName'), '.', parameters('region'), '.web.core.windows.net')]",
                         "isHttpAllowed": true,
                         "isHttpsAllowed": true,
-                        "queryStringCachingBehavior": "IgnoreQueryString",
-                        "contentTypesToCompress": [
-                            "text/plain",
-                            "text/html",
-                            "text/css",
-                            "application/x-javascript",
-                            "text/javascript"
-                        ],
-                        "isCompressionEnabled": true,
                         "origins": [
                             {
                                 "name": "origin1",
                                 "properties": {
-                                    "hostName": "[concat(variables('endpointName'), '.', parameters('domain'))]"
+                                    "hostName": "[concat(variables('storageAccountName'),  '.', parameters('region'), '.web.core.windows.net')]"
                                 }
                             }
                         ]
-                    }
+                    },
+                    "resources": [
+                        {
+                            "type": "customdomains",
+                            "apiVersion": "2016-04-02",
+                            "name": "[replace(concat(variables('endpointName'), '.', parameters('domain')), '.', '-')]",
+                            "dependsOn": [
+                                "[resourceId('Microsoft.Cdn/profiles/endpoints', variables('cdnName'), variables('endpointName'))]",
+                                "[resourceId('Microsoft.Cdn/profiles', variables('endpointName'))]"
+                            ],
+                            "properties": {
+                                "hostName": "[concat(variables('endpointName'), '.', parameters('domain'))]"
+                            }
+                        }
+                    ]
                 }
             ]
         },
@@ -122,27 +127,32 @@
                     "name": "[variables('endpointName2')]",
                     "type": "endpoints",
                     "properties": {
-                        "originHostHeader": "[concat(variables('endpointName2'), parameter('region'), '.web.core.windows.net')]",
+                        "originHostHeader": "[concat(variables('storageAccountName2'), '.', parameters('region'), '.web.core.windows.net')]",
                         "isHttpAllowed": true,
                         "isHttpsAllowed": true,
-                        "queryStringCachingBehavior": "IgnoreQueryString",
-                        "contentTypesToCompress": [
-                            "text/plain",
-                            "text/html",
-                            "text/css",
-                            "application/x-javascript",
-                            "text/javascript"
-                        ],
-                        "isCompressionEnabled": true,
                         "origins": [
                             {
                                 "name": "origin1",
                                 "properties": {
-                                    "hostName": "[concat(variables('endpointName2'), '.', parameters('domain'))]"
+                                    "hostName": "[concat(variables('storageAccountName2'),  '.', parameters('region'), '.web.core.windows.net')]"
                                 }
                             }
                         ]
-                    }
+                    },
+                    "resources": [
+                        {
+                            "type": "customdomains",
+                            "apiVersion": "2016-04-02",
+                            "name": "[replace(concat(variables('endpointName2'), '.', parameters('domain')), '.', '-')]",
+                            "dependsOn": [
+                                "[resourceId('Microsoft.Cdn/profiles/endpoints', variables('cdnName2'), variables('endpointName2'))]",
+                                "[resourceId('Microsoft.Cdn/profiles', variables('endpointName2'))]"
+                            ],
+                            "properties": {
+                                "hostName": "[concat(variables('endpointName2'), '.', parameters('domain'))]"
+                            }
+                        }
+                    ]
                 }
             ]
         },
@@ -183,27 +193,32 @@
                     "name": "[variables('endpointName3')]",
                     "type": "endpoints",
                     "properties": {
-                        "originHostHeader": "[concat(variables('endpointName3'), parameter('region'), '.web.core.windows.net')]",
+                        "originHostHeader": "[concat(variables('storageAccountName3'), '.', parameters('region'), '.web.core.windows.net')]",
                         "isHttpAllowed": true,
                         "isHttpsAllowed": true,
-                        "queryStringCachingBehavior": "IgnoreQueryString",
-                        "contentTypesToCompress": [
-                            "text/plain",
-                            "text/html",
-                            "text/css",
-                            "application/x-javascript",
-                            "text/javascript"
-                        ],
-                        "isCompressionEnabled": true,
                         "origins": [
                             {
                                 "name": "origin1",
                                 "properties": {
-                                    "hostName": "[concat(variables('endpointName3'),  '.', parameters('domain'))]"
+                                    "hostName": "[concat(variables('storageAccountName3'),  '.', parameters('region'), '.web.core.windows.net')]"
                                 }
                             }
                         ]
-                    }
+                    },
+                    "resources": [
+                        {
+                            "type": "customdomains",
+                            "apiVersion": "2016-04-02",
+                            "name": "[replace(concat(variables('endpointName3'), '.', parameters('domain')), '.', '-')]",
+                            "dependsOn": [
+                                "[resourceId('Microsoft.Cdn/profiles/endpoints', variables('cdnName3'), variables('endpointName3'))]",
+                                "[resourceId('Microsoft.Cdn/profiles', variables('endpointName3'))]"
+                            ],
+                            "properties": {
+                                "hostName": "[concat(variables('endpointName3'), '.', parameters('domain'))]"
+                            }
+                        }
+                    ]
                 }
             ]
         }
