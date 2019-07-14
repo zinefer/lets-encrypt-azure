@@ -1,0 +1,14 @@
+{
+    "certificates": [
+        {
+            "hostNames": [
+                "example.com",
+                "www.example.com"
+            ],
+            "targetResource": {
+                "type": "cdn",
+                "name": "example"
+            }
+        }
+    ]
+}

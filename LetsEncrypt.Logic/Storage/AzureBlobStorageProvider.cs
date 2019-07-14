@@ -13,27 +13,29 @@ namespace LetsEncrypt.Logic.Storage
     public class AzureBlobStorageProvider : IStorageProvider
     {
         private CloudBlobClient _blobClient;
-        private string _container;
+        private readonly string _container;
 
         public AzureBlobStorageProvider(
             string connectionString,
             string container)
         {
+            _container = container ?? throw new ArgumentNullException(nameof(container));
             var storageClient = CloudStorageAccount.Parse(connectionString ?? throw new ArgumentNullException(nameof(connectionString)));
-            Setup(storageClient, container);
+            Setup(storageClient);
         }
 
         public AzureBlobStorageProvider(TokenCredential msiCredentials, string account, string container)
         {
+            _container = container ?? throw new ArgumentNullException(nameof(container));
+
             var cred = new StorageCredentials(msiCredentials ?? throw new ArgumentNullException(nameof(msiCredentials)));
             var storageClient = new CloudStorageAccount(cred, account, null, true);
-            Setup(storageClient, container);
+            Setup(storageClient);
         }
 
-        private void Setup(CloudStorageAccount account, string container)
+        private void Setup(CloudStorageAccount account)
         {
             _blobClient = account.CreateCloudBlobClient();
-            _container = container ?? throw new ArgumentNullException(nameof(container));
         }
 
         public string Escape(string fileName)

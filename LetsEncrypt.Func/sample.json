@@ -23,33 +23,33 @@
             // defaults to assume MSI access to $wev container
             "challengeResponder": {
                 "type": "storageAccount",
-              "properties": {
-                // assumes static website is enabled on the storage account by default
-                "container": "$web",
-                // assumes standard letsencrypt folder
-                "path": ".well-known/acme-challenge/",
-
-                // supports 3 modes of authentication: MSI, connection string and connection string in keyvault
-
-                // 1. MSI (preferred)
-                // for MSI you must grant the function MSI "Storage Blob Data Contributor" on the $web container (in the Azure Portal IAM section of the storage container), the function MSI has the same name as your function resource
-                // if MSI is used, the accountName of the storage is needed.
-                // if accountName not set, assumes same name as target resource
-                // note that "-" is automatically removed, e.g. keyvault "my-app" -> assumes storage "myapp"
-                "accountName": "example",
-
-                // 2. connection string (least secure)
-                // just set the full connection string in the config:
-                "connectionString": "",
-
-                // 3. connection string in keyvault:
-                // (function app MSI must be granted Get,List secrets access policies to the keyvault):
-                // if keyVaultName not set, assumes same keyvault as in certificateStore section
-                "keyVaultName": "example",
-                // must contain connection string to storage account
-                // defaults to name "Storage" id not set
-                "secretName": "Storage"
-              }
+                "properties": {
+                    // assumes static website is enabled on the storage account by default
+                    "container": "$web",
+                    // assumes standard letsencrypt folder
+                    "path": ".well-known/acme-challenge/",
+                    
+                    // supports 3 modes of authentication: MSI, connection string and connection string in keyvault
+                    
+                    // 1. MSI (preferred)
+                    // for MSI you must grant the function MSI "Storage Blob Data Contributor" on the $web container (in the Azure Portal IAM section of the storage container), the function MSI has the same name as your function resource
+                    // if MSI is used, the accountName of the storage is needed.
+                    // if accountName not set, assumes same name as target resource
+                    // note that "-" is automatically removed, e.g. keyvault "my-app" -> assumes storage "myapp"
+                    "accountName": "example",
+                    
+                    // 2. connection string (least secure)
+                    // just set the full connection string in the config:
+                    "connectionString": "",
+                    
+                    // 3. connection string in keyvault:
+                    // (function app MSI must be granted Get,List secrets access policies to the keyvault):
+                    // if keyVaultName not set, assumes same keyvault as in certificateStore section
+                    "keyVaultName": "example",
+                    // must contain connection string to storage account
+                    // defaults to name "Storage" id not set
+                    "secretName": "Storage"
+                }
             },
             "certificateStore": {
                 // only supports keyvault for now

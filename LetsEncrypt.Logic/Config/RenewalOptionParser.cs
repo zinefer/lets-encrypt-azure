@@ -6,10 +6,8 @@ using LetsEncrypt.Logic.Providers.TargetResources;
 using LetsEncrypt.Logic.Storage;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
-using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Auth;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Linq;
@@ -22,14 +20,22 @@ namespace LetsEncrypt.Logic.Config
 {
     public class RenewalOptionParser : IRenewalOptionParser
     {
+        public const string FileNameForPermissionCheck = "permission-check.blob";
+
         private readonly IAzureHelper _azureHelper;
+        private readonly IKeyVaultClient _keyVaultClient;
         private readonly ILogger _log;
+        private readonly IStorageFactory _storageFactory;
 
         public RenewalOptionParser(
             IAzureHelper azureHelper,
+            IKeyVaultClient keyVaultClient,
+            IStorageFactory storageFactory,
             ILogger log)
         {
             _azureHelper = azureHelper ?? throw new ArgumentNullException(nameof(azureHelper));
+            _keyVaultClient = keyVaultClient ?? throw new ArgumentNullException(nameof(keyVaultClient));
+            _storageFactory = storageFactory ?? throw new ArgumentNullException(nameof(storageFactory));
             _log = log ?? throw new ArgumentNullException(nameof(log));
         }
 
@@ -60,20 +66,14 @@ namespace LetsEncrypt.Logic.Config
                     if (string.IsNullOrEmpty(accountName))
                         accountName = ConvertToValidStorageAccountName(target.Name);
 
-                    var provider = new AzureServiceTokenProvider();
-                    var state = new TokenRenewerState
-                    {
-                        AzureHelper = _azureHelper,
-                        TokenProvider = provider
-                    };
-                    var tokenAndFrequency = await StorageMsiTokenRenewerAsync(state, cancellationToken);
-                    var token = new TokenCredential(tokenAndFrequency.Token, StorageMsiTokenRenewerAsync, state, tokenAndFrequency.Frequency.Value);
-                    var storage = new AzureBlobStorageProvider(token, accountName, props.ContainerName);
+                    var storage = await _storageFactory.FromMsiAsync(accountName, props.ContainerName, cancellationToken);
                     // verify that MSI access works, fallback otherwise
-                    // not ideal since it's a readonly check -> we need Blob Contributor but user could set Blob Reader and this check would pass
+                    // not ideal since it's a readonly check
+                    // -> we need Blob Contributor for challenge persist but user could set Blob Reader and this check would pass
+                    // alternative: write + delete a file from container as a check
                     try
                     {
-                        await storage.ExistsAsync("1.txt", cancellationToken);
+                        await storage.ExistsAsync(FileNameForPermissionCheck, cancellationToken);
                     }
                     catch (StorageException e) when (e.RequestInformation.HttpStatusCode == (int)HttpStatusCode.Forbidden)
                     {
@@ -92,7 +92,7 @@ namespace LetsEncrypt.Logic.Config
                         if (string.IsNullOrEmpty(connectionString))
                             throw new InvalidOperationException($"MSI access failed for {accountName} and could not find fallback connection string for storage access. Unable to proceed with Let's encrypt challenge");
 
-                        storage = new AzureBlobStorageProvider(connectionString, props.ContainerName);
+                        storage = _storageFactory.FromConnectionString(connectionString, props.ContainerName);
                     }
                     return new AzureStorageHttpChallengeResponder(storage);
                 default:
@@ -125,7 +125,7 @@ namespace LetsEncrypt.Logic.Config
                     {
                         keyVaultName = target.Name;
                     }
-                    return new KeyVaultCertificateStore(GetKeyVaultClient(), keyVaultName, certificateName);
+                    return new KeyVaultCertificateStore(_keyVaultClient, keyVaultName, certificateName);
                 default:
                     throw new NotImplementedException(store.Type);
             }
@@ -170,17 +170,11 @@ namespace LetsEncrypt.Logic.Config
         private string ConvertToValidStorageAccountName(string resourceName)
             => resourceName?.Replace("-", "");
 
-        private IKeyVaultClient GetKeyVaultClient()
-        {
-            var tokenProvider = new AzureServiceTokenProvider();
-            return new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback));
-        }
-
         private async Task<string> GetSecretAsync(string keyVaultName, string secretName, CancellationToken cancellationToken)
         {
             try
             {
-                var secret = await GetKeyVaultClient().GetSecretAsync($"https://{keyVaultName}.vault.azure.net", secretName, cancellationToken);
+                var secret = await _keyVaultClient.GetSecretAsync($"https://{keyVaultName}.vault.azure.net", secretName, cancellationToken);
                 return secret.Value;
             }
             catch (KeyVaultErrorException ex)
@@ -191,30 +185,12 @@ namespace LetsEncrypt.Logic.Config
 
                 throw;
             }
+            // TODO: access denied exception (e.g. user does not provide keyvault -> fallbackname is used and said keyvault exists but no access)
             catch (HttpRequestException e)
             {
                 _log.LogError(e, $"Unable to get secret from keyvault {keyVaultName}");
                 throw;
             }
-        }
-
-        private static async Task<NewTokenAndFrequency> StorageMsiTokenRenewerAsync(object state, CancellationToken cancellationToken)
-        {
-            var s = (TokenRenewerState)state;
-            const string StorageResource = "https://storage.azure.com/";
-            var authResult = await s.TokenProvider.GetAuthenticationResultAsync(StorageResource, await s.AzureHelper.GetTenantIdAsync(cancellationToken), cancellationToken);
-            var next = authResult.ExpiresOn - DateTimeOffset.UtcNow - TimeSpan.FromMinutes(5);
-            if (next.Ticks < 0)
-                next = default;
-
-            return new NewTokenAndFrequency(authResult.AccessToken, next);
-        }
-
-        private class TokenRenewerState
-        {
-            public AzureServiceTokenProvider TokenProvider { get; set; }
-
-            public IAzureHelper AzureHelper { get; set; }
         }
     }
 }

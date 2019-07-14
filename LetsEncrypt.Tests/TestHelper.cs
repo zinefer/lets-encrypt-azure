@@ -1,4 +1,5 @@
 ﻿using LetsEncrypt.Logic.Config;
+using System.IO;
 
 namespace LetsEncrypt.Tests
 {
@@ -20,5 +21,10 @@ namespace LetsEncrypt.Tests
         {
             Email = TestUser
         };
+
+        public static Configuration LoadConfig(string filename)
+        {
+            return new ConfigurationProcessor().ValidateAndLoad(File.ReadAllText($"Files/{filename}.json"));
+        }
     }
 }

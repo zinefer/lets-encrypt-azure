@@ -2,6 +2,8 @@ using LetsEncrypt.Logic;
 using LetsEncrypt.Logic.Authentication;
 using LetsEncrypt.Logic.Config;
 using LetsEncrypt.Logic.Storage;
+using Microsoft.Azure.KeyVault;
+using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
@@ -54,7 +56,12 @@ namespace LetsEncrypt.Func
             var configurations = await LoadConfigFilesAsync(storageProvider, processor, log, cancellationToken);
             IAuthenticationService authenticationService = new AuthenticationService(storageProvider);
             var az = new AzureHelper();
-            var renewalOptionsParser = new RenewalOptionParser(az, log);
+
+            var tokenProvider = new AzureServiceTokenProvider();
+            var keyVaultClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback));
+            var storageFactory = new StorageFactory(az);
+
+            var renewalOptionsParser = new RenewalOptionParser(az, keyVaultClient, storageFactory, log);
 
             IRenewalService renewalService = new RenewalService(authenticationService, renewalOptionsParser, log);
             var stopwatch = new Stopwatch();
