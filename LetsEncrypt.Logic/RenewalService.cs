@@ -173,7 +173,8 @@ namespace LetsEncrypt.Logic
                 .ToArray();
             if (failures.Any())
             {
-                throw new RenewalException($"Expected all challenges to be in status {expectedStatus}, but {failures.Length} where not. See exception for details.", failures);
+                var errors = string.Join(Environment.NewLine, failures.Select(f => f.Detail));
+                throw new RenewalException($"Expected all challenges to be in status {expectedStatus}, but {failures.Length} where not: {errors}", failures);
             }
         }
 
@@ -190,7 +191,7 @@ namespace LetsEncrypt.Logic
             CancellationToken cancellationToken)
         {
             var store = _renewalOptionParser.ParseCertificateStore(cfg);
-            _log.LogInformation($"Storing certificate in {store.Name}");
+            _log.LogInformation($"Storing certificate in {store.Type} {store.Name}");
 
             // request certificate
             var key = KeyFactory.NewKey(KeyAlgorithm.RS256);

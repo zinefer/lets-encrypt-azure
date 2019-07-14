@@ -24,6 +24,8 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
 
         public string Name { get; }
 
+        public string Type => "keyVault";
+
         public async Task<ICertificate> GetCertificateAsync(CancellationToken cancellationToken)
         {
             try
@@ -47,9 +49,17 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
             var base64 = Convert.ToBase64String(pfxBytes);
             var now = DateTime.UtcNow;
             var attr = new CertificateAttributes(true, now, cert.NotAfter, now);
-            var r = await _keyVaultClient.ImportCertificateAsync($"https://{Name}.vault.azure.net", _certificateName, base64, password, certificateAttributes: attr);
-
+            var r = await ImportCertificateAsync(base64, password, attr, cancellationToken);
             return new CertificateInfo(r, Name);
+        }
+
+        private async Task<CertificateBundle> ImportCertificateAsync(
+            string certificateBase64,
+            string password,
+            CertificateAttributes attributes,
+            CancellationToken cancellationToken)
+        {
+            return await _keyVaultClient.ImportCertificateAsync($"https://{Name}.vault.azure.net", _certificateName, certificateBase64, password, certificateAttributes: attributes, cancellationToken: cancellationToken);
         }
 
         private X509Certificate2 LoadFrom(byte[] bytes, string password)

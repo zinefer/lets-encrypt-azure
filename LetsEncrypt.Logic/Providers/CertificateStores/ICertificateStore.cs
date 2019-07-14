@@ -7,6 +7,8 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
     {
         string Name { get; }
 
+        string Type { get; }
+
         Task<ICertificate> GetCertificateAsync(CancellationToken cancellationToken);
 
         Task<ICertificate> UploadAsync(byte[] pfxBytes, string password, string[] hostNames, CancellationToken cancellationToken);

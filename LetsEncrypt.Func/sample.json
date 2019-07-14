@@ -34,7 +34,7 @@
                 // 1. MSI (preferred)
                 // for MSI you must grant the function MSI "Storage Blob Data Contributor" on the $web container (in the Azure Portal IAM section of the storage container), the function MSI has the same name as your function resource
                 // if MSI is used, the accountName of the storage is needed.
-                // if accountName not set, assumes same name as keyvault in certificateStore section
+                // if accountName not set, assumes same name as target resource
                 // note that "-" is automatically removed, e.g. keyvault "my-app" -> assumes storage "myapp"
                 "accountName": "example",
 

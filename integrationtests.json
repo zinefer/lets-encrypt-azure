@@ -1,7 +1,10 @@
 {
+    // file used to run scheduled integration tests against let's encrypt staging with various configuration options
     "acme": {
         "email": "marcstan@live.com",
-        "renewXDaysBeforeExpiry": 30,
+        // renew often so we get fast feedback on errors
+        "renewXDaysBeforeExpiry": 90,
+        // letsencrypt limits real certs, so use staging (unlimited certs) to not interrupt real domains
         "staging": true
     },
     "certificates": [

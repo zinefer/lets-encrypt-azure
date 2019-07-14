@@ -20,6 +20,7 @@ namespace LetsEncrypt.Func
     {
         /// <summary>
         /// Wrapper function that allows manual execution via http
+        /// TODO: parameter for force cert issue + force deploy
         /// </summary>
         /// <param name="req"></param>
         /// <param name="log"></param>
@@ -53,7 +54,7 @@ namespace LetsEncrypt.Func
             var configurations = await LoadConfigFilesAsync(storageProvider, processor, log, cancellationToken);
             IAuthenticationService authenticationService = new AuthenticationService(storageProvider);
             var az = new AzureHelper();
-            var renewalOptionsParser = new RenewalOptionParser(az);
+            var renewalOptionsParser = new RenewalOptionParser(az, log);
 
             IRenewalService renewalService = new RenewalService(authenticationService, renewalOptionsParser, log);
             var stopwatch = new Stopwatch();
