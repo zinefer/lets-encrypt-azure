@@ -179,13 +179,17 @@ namespace LetsEncrypt.Logic.Config
             }
             catch (KeyVaultErrorException ex)
             {
+                if (ex.Response.StatusCode == HttpStatusCode.Forbidden)
+                {
+                    _log.LogError(ex, $"Access forbidden. Unable to get secret from keyvault {keyVaultName}");
+                    throw;
+                }
                 if (ex.Response.StatusCode == HttpStatusCode.NotFound ||
                     ex.Body.Error.Code == "SecretNotFound")
                     return null;
 
                 throw;
             }
-            // TODO: access denied exception (e.g. user does not provide keyvault -> fallbackname is used and said keyvault exists but no access)
             catch (HttpRequestException e)
             {
                 _log.LogError(e, $"Unable to get secret from keyvault {keyVaultName}");
