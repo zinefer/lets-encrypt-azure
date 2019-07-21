@@ -1,6 +1,3 @@
-**This is currently under development and barely tested. Use at your own risk!**
-___
-
 # Azure function based Let's Encrypt automation (Azure CDN only)
 
 Automatically issue Let's Encrypt SSL certificates for all your custom domain names in Azure.
@@ -51,7 +48,7 @@ Along with the function app a storage account is created and the keyvault(s) pre
 
 The storage account is used to store the metadata and configuration for the renewal process (inside container `letsencrypt`).
 
-If the function was deployed successfully you can run it once manually (using the provided http function `execute`). The storage account should then contain a container `letsencrypt` with a `config/sample.json` file (both will be automatically created by the function call if they don't exist yet).
+If the function was deployed successfully you can run it once manually (using the provided http function `execute` **Note** that it only accepts POST requests). The storage account should then contain a container `letsencrypt` with a `config/sample.json` file (both will be automatically created by the function call if they don't exist yet).
 
 The file contains comments and you should be able to add your own web apps and domains quite easily based on them.
 
@@ -78,3 +75,14 @@ Note that RBAC changes may take up to 5 minutes to reflect.
 If Azure CDN is setup correctly (with the endpoint and domain already correctly mapped) and the permissions are assigned correctly then the function should create certificates in the keyvault after a successful run and attach them to the CDN/update them when needed.
 
 **Note:** The CDN update can take up to 6 hours until the certificate is used and you can see the progress in the CDN -> Endpoints section (the function will not check for it once it has triggered the deploy successfully).
+
+# Invoke manually
+
+By default the function is schedule to run daily and only updates the certificate based on the config (default: if the existing certificate is older than 30 days).
+
+To manually invoke it, call the endpoint `\<your-function>.azurewebsites.net/api/execute`. Note that it is a POST endpoint.
+
+It currently requires no body but allows a few overrides via querystring:
+
+* `newCertificate` - if set to `true` will issue new Let's Encrypt certificates for all sites even if the existing certificates haven't expired (this will also update the azure resources)
+* `updateResource` - if set to `true` will update the azure resource with the existing certificate. This is useful if you already have a certificate in the keyvault and just want to update the azure resources to use it, without issuing a new certificate

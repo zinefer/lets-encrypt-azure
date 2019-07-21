@@ -1,4 +1,6 @@
-﻿namespace LetsEncrypt.Logic.Config
+﻿using Newtonsoft.Json;
+
+namespace LetsEncrypt.Logic.Config
 {
     /// <summary>
     /// Options related to a single certificate.
@@ -26,5 +28,11 @@
         /// The resource where the certificate should be applied to once it is stored.
         /// </summary>
         public GenericEntry TargetResource { get; set; }
+
+        /// <summary>
+        /// Parameters that can be set by user via REST calls but not in config (intended for one time calls only).
+        /// </summary>
+        [JsonIgnore]
+        public Overrides Overrides { get; set; }
     }
 }

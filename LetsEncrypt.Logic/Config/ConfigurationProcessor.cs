@@ -49,6 +49,7 @@ namespace LetsEncrypt.Logic.Config
                     throw new ArgumentException($"Missing parameter type in section {nameof(cfg.TargetResource)} of {cfg.HostNames}");
 
                 var validate = GetTargetResourceType(cfg.TargetResource.Type);
+                cfg.Overrides = Overrides.None;
                 validate(cfg.TargetResource);
             }
 

@@ -1,4 +1,5 @@
 using LetsEncrypt.Logic;
+using LetsEncrypt.Logic.Acme;
 using LetsEncrypt.Logic.Authentication;
 using LetsEncrypt.Logic.Config;
 using LetsEncrypt.Logic.Storage;
@@ -21,19 +22,26 @@ namespace LetsEncrypt.Func
     public static class AutoRenewal
     {
         /// <summary>
-        /// Wrapper function that allows manual execution via http
-        /// TODO: parameter for force cert issue + force deploy
+        /// Wrapper function that allows manual execution via http with optional override parameters.
         /// </summary>
         /// <param name="req"></param>
         /// <param name="log"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [FunctionName("execute")]
-        public static Task ExecuteManuallyAsync(
-            [HttpTrigger(AuthorizationLevel.Function)] HttpRequestMessage req,
+        public static async Task ExecuteManuallyAsync(
+            [HttpTrigger(AuthorizationLevel.Function, "POST", Route = "")] HttpRequestMessage req,
             ILogger log,
             CancellationToken cancellationToken)
-            => RenewAsync(null, log, cancellationToken);
+        {
+            var q = req.RequestUri.ParseQueryString();
+            var overrides = new Overrides
+            {
+                NewCertificate = "true".Equals(q.GetValues(nameof(Overrides.NewCertificate))?.FirstOrDefault(), StringComparison.OrdinalIgnoreCase),
+                UpdateResource = "true".Equals(q.GetValues(nameof(Overrides.UpdateResource))?.FirstOrDefault(), StringComparison.OrdinalIgnoreCase)
+            };
+            await RenewAsync(overrides, log, cancellationToken);
+        }
 
         /// <summary>
         /// Time triggered function that reads config files from storage
@@ -44,10 +52,13 @@ namespace LetsEncrypt.Func
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [FunctionName("renew")]
-        public static async Task RenewAsync(
+        public static Task RenewAsync(
           [TimerTrigger(Schedule.Daily, RunOnStartup = true)] TimerInfo timer,
           ILogger log,
           CancellationToken cancellationToken)
+            => RenewAsync((Overrides)null, log, cancellationToken);
+
+        private static async Task RenewAsync(Overrides overrides, ILogger log, CancellationToken cancellationToken)
         {
             // internal storage (used for letsencrypt account metadata)
             IStorageProvider storageProvider = new AzureBlobStorageProvider(Environment.GetEnvironmentVariable("AzureWebJobsStorage"), "letsencrypt");
@@ -62,8 +73,9 @@ namespace LetsEncrypt.Func
             var storageFactory = new StorageFactory(az);
 
             var renewalOptionsParser = new RenewalOptionParser(az, keyVaultClient, storageFactory, log);
+            var certificateBuilder = new CertificateBuilder();
 
-            IRenewalService renewalService = new RenewalService(authenticationService, renewalOptionsParser, log);
+            IRenewalService renewalService = new RenewalService(authenticationService, renewalOptionsParser, certificateBuilder, log);
             var stopwatch = new Stopwatch();
             // TODO: with lots of certificate renewals this could run into function timeout (10mins)
             // with 30 days to expiry (default setting) this isn't a big problem as next day all finished certs are skipped
@@ -76,6 +88,7 @@ namespace LetsEncrypt.Func
                     {
                         stopwatch.Restart();
                         var hostNames = string.Join(";", cert.HostNames);
+                        cert.Overrides = overrides ?? Overrides.None;
                         try
                         {
                             var result = await renewalService.RenewCertificateAsync(config.Acme, cert, cancellationToken);
@@ -105,7 +118,8 @@ namespace LetsEncrypt.Func
             }
         }
 
-        private static async Task<IEnumerable<(string configName, Configuration)>> LoadConfigFilesAsync(IStorageProvider storageProvider,
+        private static async Task<IEnumerable<(string configName, Configuration)>> LoadConfigFilesAsync(
+            IStorageProvider storageProvider,
             IConfigurationProcessor processor,
             ILogger log,
             CancellationToken cancellationToken)

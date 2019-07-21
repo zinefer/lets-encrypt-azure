@@ -1,6 +1,6 @@
-using Certes;
 using Certes.Acme;
 using Certes.Acme.Resource;
+using LetsEncrypt.Logic.Acme;
 using LetsEncrypt.Logic.Authentication;
 using LetsEncrypt.Logic.Config;
 using LetsEncrypt.Logic.Extensions;
@@ -8,7 +8,6 @@ using LetsEncrypt.Logic.Providers.CertificateStores;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,16 +17,18 @@ namespace LetsEncrypt.Logic
     {
         private readonly ILogger _log;
         private readonly IAuthenticationService _authenticationService;
-        private static readonly RNGCryptoServiceProvider _randomGenerator = new RNGCryptoServiceProvider();
         private readonly IRenewalOptionParser _renewalOptionParser;
+        private readonly ICertificateBuilder _certificateBuilder;
 
         public RenewalService(
             IAuthenticationService authenticationService,
             IRenewalOptionParser renewalOptionParser,
+            ICertificateBuilder certificateBuilder,
             ILogger log)
         {
             _authenticationService = authenticationService ?? throw new ArgumentNullException(nameof(authenticationService));
             _renewalOptionParser = renewalOptionParser ?? throw new ArgumentNullException(nameof(renewalOptionParser));
+            _certificateBuilder = certificateBuilder ?? throw new ArgumentNullException(nameof(certificateBuilder));
             _log = log ?? throw new ArgumentNullException(nameof(log));
         }
 
@@ -47,16 +48,23 @@ namespace LetsEncrypt.Logic
             // 1. skip if not outdated yet
             var cert = await GetExistingCertificateAsync(options, cfg, cancellationToken);
 
-            // TODO: this also skips the resourceUpdate (needed in case of previous errors or incase of cert already existing) -> config flag?
             if (cert != null)
-                return RenewalResult.NoChange;
+            {
+                // can usually skip rest, except if override is used
+                if (!cfg.Overrides.UpdateResource)
+                    return RenewalResult.NoChange;
 
-            // 2. run Let's Encrypt challenge
-            _log.LogInformation($"Issuing a new certificate for {hostNames}");
-            var order = await ValidateOrderAsync(options, cfg, cancellationToken);
+                _log.LogWarning($"Override '{nameof(cfg.Overrides.UpdateResource)}' is enabled. Forcing resource update.");
+            }
+            else
+            {
+                // 2. run Let's Encrypt challenge as cert either doesn't exist or is expired
+                _log.LogInformation($"Issuing a new certificate for {hostNames}");
+                var order = await ValidateOrderAsync(options, cfg, cancellationToken);
 
-            // 3. save certificate
-            cert = await GenerateAndStoreCertificateAsync(order, cfg, cancellationToken);
+                // 3. save certificate
+                cert = await GenerateAndStoreCertificateAsync(order, cfg, cancellationToken);
+            }
 
             // 4. update Azure resource
             var resource = _renewalOptionParser.ParseTargetResource(cfg);
@@ -77,6 +85,13 @@ namespace LetsEncrypt.Logic
             CertificateRenewalOptions cfg,
             CancellationToken cancellationToken)
         {
+            if (cfg.Overrides.NewCertificate)
+            {
+                // ignore existing certificate
+                _log.LogWarning($"Override '{nameof(cfg.Overrides.NewCertificate)}' is enabled, forcing certificate renewal.");
+                return null;
+            }
+
             var cert = _renewalOptionParser.ParseCertificateStore(cfg);
 
             // determine if renewal is needed based on existing cert
@@ -194,17 +209,7 @@ namespace LetsEncrypt.Logic
             _log.LogInformation($"Storing certificate in {store.Type} {store.Name}");
 
             // request certificate
-            var key = KeyFactory.NewKey(KeyAlgorithm.RS256);
-            await order.Finalize(new CsrInfo(), key);
-
-            var certChain = await order.Download();
-            var builder = certChain.ToPfx(key);
-            builder.FullChain = true;
-
-            var bytes = new byte[32];
-            _randomGenerator.GetNonZeroBytes(bytes);
-            var password = Convert.ToBase64String(bytes);
-            var pfxBytes = builder.Build(string.Join(";", cfg.HostNames), password);
+            (byte[] pfxBytes, string password) = await _certificateBuilder.BuildCertificateAsync(order, cfg, cancellationToken);
 
             return await store.UploadAsync(pfxBytes, password, cfg.HostNames, cancellationToken);
         }
