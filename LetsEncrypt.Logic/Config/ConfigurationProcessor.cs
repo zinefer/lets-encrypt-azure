@@ -18,6 +18,9 @@ namespace LetsEncrypt.Logic.Config
             if (instance.Acme.RenewXDaysBeforeExpiry <= 1)
                 throw new ArgumentException($"Renewal is set to {instance.Acme.RenewXDaysBeforeExpiry} which is not valid. " +
                     "Recommendation is to set it to at least 2 days, as the certificate update may take up to 10 hours for the CDN.");
+            if (instance.Acme.RenewXDaysBeforeExpiry >= 90)
+                throw new ArgumentException($"Renewal is set to {instance.Acme.RenewXDaysBeforeExpiry} which is not valid." +
+                    "Let's Encrypt certificates are only valid for 90 days, a setting this high would cause renewals every single day. Let's Encrypt recommendation is to renew after 1/3 lifetime, so after 30 days.");
 
             for (int i = 0; i < instance.Certificates.Length; i++)
             {

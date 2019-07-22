@@ -68,6 +68,7 @@ namespace LetsEncrypt.Logic
 
             // 4. update Azure resource
             var resource = _renewalOptionParser.ParseTargetResource(cfg);
+            _log.LogInformation($"Updating {resource.Name} with certificates for {hostNames}");
             await resource.UpdateAsync(cert, cancellationToken);
 
             return RenewalResult.Success;
@@ -107,14 +108,18 @@ namespace LetsEncrypt.Logic
 
                 var now = DateTime.UtcNow;
                 // must be valid now and some day in the future based on config expiration rule
-                var isValid =
-                    (!existingCert.NotBefore.HasValue || existingCert.NotBefore < now) &&
-                    existingCert.Expires.Value.AddDays(-options.RenewXDaysBeforeExpiry) > now;
-                if (isValid)
+                var isValidAlready = !existingCert.NotBefore.HasValue || existingCert.NotBefore < now;
+                var isStillValid = existingCert.Expires.Value.AddDays(-options.RenewXDaysBeforeExpiry) > now;
+                if (isValidAlready && isStillValid)
                 {
                     _log.LogInformation($"Certificate {existingCert.Name} (from source: {cert.Name}) is still valid until {existingCert.Expires.Value}. Skipping renewal.");
                     return existingCert;
                 }
+                var reason = !isValidAlready ?
+                    $"certificate won't be valid until {existingCert.NotBefore}" :
+                    $"renewal is demanded {options.RenewXDaysBeforeExpiry} days before expiry and it is currently {(int)(existingCert.Expires.Value - now).TotalDays} days before expiry";
+
+                _log.LogInformation($"Certificate {existingCert.Name} (from source: {cert.Name}) is not valid ({reason}).");
             }
             // either no cert or expired
             return null;
