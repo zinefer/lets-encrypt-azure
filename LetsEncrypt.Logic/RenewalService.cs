@@ -68,7 +68,7 @@ namespace LetsEncrypt.Logic
 
             // 4. update Azure resource
             var resource = _renewalOptionParser.ParseTargetResource(cfg);
-            _log.LogInformation($"Updating {resource.Name} with certificates for {hostNames}");
+            _log.LogInformation($"Updating {resource.Name} ({resource.Type}) with certificates for {hostNames}");
             await resource.UpdateAsync(cert, cancellationToken);
 
             return RenewalResult.Success;
@@ -93,17 +93,17 @@ namespace LetsEncrypt.Logic
                 return null;
             }
 
-            var cert = _renewalOptionParser.ParseCertificateStore(cfg);
+            var certStore = _renewalOptionParser.ParseCertificateStore(cfg);
 
             // determine if renewal is needed based on existing cert
-            var existingCert = await cert.GetCertificateAsync(cancellationToken);
+            var existingCert = await certStore.GetCertificateAsync(cancellationToken);
 
             // check if cert exists and that it is valid right now
             if (existingCert != null)
             {
                 // handle cases of manually uploaded certificates
                 if (!existingCert.Expires.HasValue)
-                    throw new NotSupportedException($"Missing expiration value on certificate {existingCert.Name} (provider: {cfg.CertificateStore.Type}). " +
+                    throw new NotSupportedException($"Missing expiration value on certificate {existingCert.Name} (provider: {certStore.Type}). " +
                         "Must be set to expiration date of the certificate.");
 
                 var now = DateTime.UtcNow;
@@ -112,14 +112,14 @@ namespace LetsEncrypt.Logic
                 var isStillValid = existingCert.Expires.Value.AddDays(-options.RenewXDaysBeforeExpiry) > now;
                 if (isValidAlready && isStillValid)
                 {
-                    _log.LogInformation($"Certificate {existingCert.Name} (from source: {cert.Name}) is still valid until {existingCert.Expires.Value}. Skipping renewal.");
+                    _log.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is still valid until {existingCert.Expires.Value}. Skipping renewal.");
                     return existingCert;
                 }
                 var reason = !isValidAlready ?
                     $"certificate won't be valid until {existingCert.NotBefore}" :
                     $"renewal is demanded {options.RenewXDaysBeforeExpiry} days before expiry and it is currently {(int)(existingCert.Expires.Value - now).TotalDays} days before expiry";
 
-                _log.LogInformation($"Certificate {existingCert.Name} (from source: {cert.Name}) is not valid ({reason}).");
+                _log.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is not valid ({reason}).");
             }
             // either no cert or expired
             return null;

@@ -120,12 +120,16 @@ namespace LetsEncrypt.Logic.Config
                     var certificateName = props.CertificateName;
                     if (string.IsNullOrEmpty(certificateName))
                         certificateName = cfg.HostNames.First().Replace(".", "-");
+
                     var keyVaultName = props.Name;
                     if (string.IsNullOrEmpty(keyVaultName))
-                    {
                         keyVaultName = target.Name;
-                    }
-                    return new KeyVaultCertificateStore(_keyVaultClient, keyVaultName, certificateName);
+
+                    var resourceGroupName = props.ResourceGroupName;
+                    if (string.IsNullOrEmpty(resourceGroupName))
+                        resourceGroupName = keyVaultName;
+
+                    return new KeyVaultCertificateStore(_azureHelper, _keyVaultClient, keyVaultName, resourceGroupName, certificateName);
                 default:
                     throw new NotImplementedException(store.Type);
             }
@@ -136,26 +140,46 @@ namespace LetsEncrypt.Logic.Config
             switch (cfg.TargetResource.Type.ToLowerInvariant())
             {
                 case "cdn":
-                    var props = cfg.TargetResource.Properties == null
-                        ? new CdnProperties
-                        {
-                            Endpoints = new[] { cfg.TargetResource.Name },
-                            Name = cfg.TargetResource.Name,
-                            ResourceGroupName = cfg.TargetResource.Name
-                        }
-                        : cfg.TargetResource.Properties.ToObject<CdnProperties>();
+                    {
+                        var props = cfg.TargetResource.Properties == null
+                            ? new CdnProperties
+                            {
+                                Endpoints = new[] { cfg.TargetResource.Name },
+                                Name = cfg.TargetResource.Name,
+                                ResourceGroupName = cfg.TargetResource.Name
+                            }
+                            : cfg.TargetResource.Properties.ToObject<CdnProperties>();
 
-                    if (string.IsNullOrEmpty(props.Name))
-                        throw new ArgumentException($"CDN section is missing required property {nameof(props.Name)}");
+                        if (string.IsNullOrEmpty(props.Name))
+                            throw new ArgumentException($"CDN section is missing required property {nameof(props.Name)}");
 
-                    var rg = props.ResourceGroupName;
-                    if (string.IsNullOrEmpty(rg))
-                        rg = props.Name;
-                    var endpoints = props.Endpoints;
-                    if (endpoints.IsNullOrEmpty())
-                        endpoints = new[] { props.Name };
+                        var rg = props.ResourceGroupName;
+                        if (string.IsNullOrEmpty(rg))
+                            rg = props.Name;
+                        var endpoints = props.Endpoints;
+                        if (endpoints.IsNullOrEmpty())
+                            endpoints = new[] { props.Name };
 
-                    return new CdnTargetResoure(_azureHelper, rg, props.Name, endpoints);
+                        return new CdnTargetResoure(_azureHelper, rg, props.Name, endpoints);
+                    }
+                case "appservice":
+                    {
+                        var props = cfg.TargetResource.Properties == null
+                            ? new AppServiceProperties
+                            {
+                                Name = cfg.TargetResource.Name,
+                                ResourceGroupName = cfg.TargetResource.Name
+                            }
+                            : cfg.TargetResource.Properties.ToObject<AppServiceProperties>();
+
+                        if (string.IsNullOrEmpty(props.Name))
+                            throw new ArgumentException($"AppService section is missing required property {nameof(props.Name)}");
+
+                        var rg = props.ResourceGroupName;
+                        if (string.IsNullOrEmpty(rg))
+                            rg = props.Name;
+                        return new AppServiceTargetResoure(_azureHelper, rg, props.Name);
+                    }
                 default:
                     throw new NotImplementedException(cfg.TargetResource.Type);
             }

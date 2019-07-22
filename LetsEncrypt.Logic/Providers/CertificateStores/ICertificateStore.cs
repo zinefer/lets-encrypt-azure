@@ -9,6 +9,11 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
 
         string Type { get; }
 
+        /// <summary>
+        /// Gets the azure resource id for this store.
+        /// </summary>
+        string ResourceId { get; }
+
         Task<ICertificate> GetCertificateAsync(CancellationToken cancellationToken);
 
         Task<ICertificate> UploadAsync(byte[] pfxBytes, string password, string[] hostNames, CancellationToken cancellationToken);

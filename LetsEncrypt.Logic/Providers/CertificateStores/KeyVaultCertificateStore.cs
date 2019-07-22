@@ -11,14 +11,20 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
     {
         private readonly IKeyVaultClient _keyVaultClient;
         private readonly string _certificateName;
+        private readonly string _resourceGroupName;
+        private readonly IAzureHelper _azureHelper;
 
         public KeyVaultCertificateStore(
+            IAzureHelper azureHelper,
             IKeyVaultClient keyVaultClient,
             string keyVaultName,
+            string resourceGroupName,
             string certificateName)
         {
+            _azureHelper = azureHelper ?? throw new ArgumentNullException(nameof(azureHelper));
             _keyVaultClient = keyVaultClient ?? throw new ArgumentNullException(nameof(keyVaultClient));
             Name = keyVaultName ?? throw new ArgumentNullException(nameof(keyVaultClient));
+            _resourceGroupName = resourceGroupName ?? throw new ArgumentNullException(nameof(resourceGroupName));
             _certificateName = certificateName ?? throw new ArgumentNullException(nameof(keyVaultClient));
         }
 
@@ -26,12 +32,14 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
 
         public string Type => "keyVault";
 
+        public string ResourceId => $"/subscriptions/{_azureHelper.GetSubscriptionId()}/resourceGroups/{_resourceGroupName}/providers/Microsoft.KeyVault/vaults/{Name}";
+
         public async Task<ICertificate> GetCertificateAsync(CancellationToken cancellationToken)
         {
             try
             {
                 var cert = await _keyVaultClient.GetCertificateAsync($"https://{Name}.vault.azure.net", _certificateName, cancellationToken);
-                return new CertificateInfo(cert, Name);
+                return new CertificateInfo(cert, this);
             }
             catch (KeyVaultErrorException ex)
             {
@@ -50,7 +58,7 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
             var now = DateTime.UtcNow;
             var attr = new CertificateAttributes(true, now, cert.NotAfter, now);
             var r = await ImportCertificateAsync(base64, password, attr, cancellationToken);
-            return new CertificateInfo(r, Name);
+            return new CertificateInfo(r, this);
         }
 
         private async Task<CertificateBundle> ImportCertificateAsync(

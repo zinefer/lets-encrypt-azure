@@ -29,8 +29,13 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
 
         public string Name { get; }
 
+        public string Type => "CDN";
+
         public async Task UpdateAsync(ICertificate cert, CancellationToken cancellationToken)
         {
+            if (cert.Store.Type != "keyVault")
+                throw new NotSupportedException("Azure CDN can only use certificates from store keyVault. Found: " + cert.Store.Type);
+
             // use REST directly because nuget packages don't contain the required endpoint to update CDN yet
             // fluent api would be nicer to use (mgmt api preview package already offers new endpoints, but fluent api does not)
             // but problematic: neither api supports fallback from MSI to local user (both requiring MSI_ENDPOINT env variable)
@@ -122,7 +127,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
                         SecretName = cert.Name,
                         SecretVersion = cert.Version,
                         SubscriptionId = _azureHelper.GetSubscriptionId(),
-                        VaultName = cert.Origin
+                        VaultName = cert.Store.Name
                     }
                 }, settings);
                 var content = new StringContent(json, Encoding.ASCII, "application/json");

@@ -87,6 +87,8 @@ namespace LetsEncrypt.Logic.Config
             {
                 case "cdn":
                     return ValidateCdn;
+                case "appservice":
+                    return ValidateAppService;
                 default:
                     throw new ArgumentException($"Unsupported type {type} for targetResource");
             }
@@ -94,7 +96,7 @@ namespace LetsEncrypt.Logic.Config
 
         private void ValidateStorage(GenericEntry entry)
         {
-            var props = entry.Properties.ToObject<StorageProperties>();
+            var props = entry.Properties?.ToObject<StorageProperties>() ?? new StorageProperties();
             if (!string.IsNullOrEmpty(props.ConnectionString))
             {
                 if (string.IsNullOrEmpty(props.ContainerName))
@@ -112,6 +114,21 @@ namespace LetsEncrypt.Logic.Config
         }
 
         private void ValidateCdn(GenericEntry entry)
+        {
+            if (entry.Properties != null)
+            {
+                var props = entry.Properties.ToObject<CdnProperties>();
+                if (string.IsNullOrEmpty(props.Name))
+                    throw new ArgumentException("cdn requires name to be set");
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(entry.Name))
+                    throw new ArgumentException($"Either {nameof(entry.Name)} or {nameof(entry.Properties)} must be set");
+            }
+        }
+
+        private void ValidateAppService(GenericEntry entry)
         {
             if (entry.Properties != null)
             {

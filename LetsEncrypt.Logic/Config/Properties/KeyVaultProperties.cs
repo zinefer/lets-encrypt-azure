@@ -11,6 +11,11 @@
         public string Name { get; set; }
 
         /// <summary>
+        /// The resource group of the keyvault.
+        /// </summary>
+        public string ResourceGroupName { get; set; }
+
+        /// <summary>
         /// The name of the certificate in the keyvault.
         /// Limited to alphanumerical and dashes.
         /// Recommended to use domain name with dots replaced by dashes. E.g. example-com

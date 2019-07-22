@@ -8,10 +8,10 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
     {
         private readonly CertificateBundle _certificateBundle;
 
-        public CertificateInfo(CertificateBundle certificateBundle, string keyVaultName)
+        public CertificateInfo(CertificateBundle certificateBundle, ICertificateStore store)
         {
             _certificateBundle = certificateBundle ?? throw new ArgumentNullException(nameof(certificateBundle));
-            Origin = keyVaultName ?? throw new ArgumentNullException(nameof(keyVaultName));
+            Store = store ?? throw new ArgumentNullException(nameof(store));
         }
 
         public DateTime? NotBefore => _certificateBundle.Attributes.NotBefore;
@@ -22,8 +22,10 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
 
         public string Version => _certificateBundle.CertificateIdentifier.Version;
 
-        public string Origin { get; }
+        public ICertificateStore Store { get; }
 
         public string[] HostNames => _certificateBundle.Policy.X509CertificateProperties.SubjectAlternativeNames.DnsNames.ToArray();
+
+        public string Thumbprint => BitConverter.ToString(_certificateBundle.X509Thumbprint).Replace("-", "");
     }
 }

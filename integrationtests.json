@@ -3,7 +3,7 @@
     "acme": {
         "email": "marcstan@live.com",
         // renew often so we get fast feedback on errors
-        "renewXDaysBeforeExpiry": 90,
+        "renewXDaysBeforeExpiry": 85,
         // letsencrypt limits real certs, so use staging (unlimited certs) to not interrupt real domains
         "staging": true
     },
@@ -47,6 +47,7 @@
                 "properties": {
                     "container": "$web",
                     "path": ".well-known/acme-challenge/",
+                    // used for connection string access (will look for secret "Storage" to contain storage account connectionstring)
                     "keyVaultName": "letsencrypt-integration"
                 }
             },
@@ -65,6 +66,29 @@
                     "endpoints": [
                         "letsencrypt-integration-03"
                     ]
+                }
+            }
+        },
+        // assign certificate to a webapp (domain must already be assigned to the webapp)
+        {
+            "hostNames": [
+                "letsencrypt-integration.web.marcstan.net"
+            ],
+            // must use redirect to read content from storage account when path .well-known/acme-challenge/ is accessed
+            // see "Supported resources.md" for examples
+            // uses MSI access to write files to storage
+            "challengeResponder": {
+                "type": "storageAccount"
+            },
+            "certificateStore": {
+                "type": "keyVault",
+                "name": "letsencrypt-integration"
+            },
+            "targetResource": {
+                "type": "appService",
+                "properties": {
+                    "name": "letsencrypt-integration",
+                    "resourceGroupName": "letsencrypt-integration"
                 }
             }
         }

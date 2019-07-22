@@ -3,6 +3,7 @@ using LetsEncrypt.Logic.Acme;
 using LetsEncrypt.Logic.Authentication;
 using LetsEncrypt.Logic.Config;
 using LetsEncrypt.Logic.Storage;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Azure.WebJobs;
@@ -29,7 +30,7 @@ namespace LetsEncrypt.Func
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [FunctionName("execute")]
-        public static async Task ExecuteManuallyAsync(
+        public static async Task<IActionResult> ExecuteManuallyAsync(
             [HttpTrigger(AuthorizationLevel.Function, "POST", Route = "")] HttpRequestMessage req,
             ILogger log,
             CancellationToken cancellationToken)
@@ -40,7 +41,18 @@ namespace LetsEncrypt.Func
                 NewCertificate = "true".Equals(q.GetValues(nameof(Overrides.NewCertificate))?.FirstOrDefault(), StringComparison.OrdinalIgnoreCase),
                 UpdateResource = "true".Equals(q.GetValues(nameof(Overrides.UpdateResource))?.FirstOrDefault(), StringComparison.OrdinalIgnoreCase)
             };
-            await RenewAsync(overrides, log, cancellationToken);
+            try
+            {
+                await RenewAsync(overrides, log, cancellationToken);
+                return new AcceptedResult();
+            }
+            catch (Exception)
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message = "Certificate renewal failed, check appinsights for details"
+                });
+            }
         }
 
         /// <summary>
@@ -80,6 +92,7 @@ namespace LetsEncrypt.Func
             // TODO: with lots of certificate renewals this could run into function timeout (10mins)
             // with 30 days to expiry (default setting) this isn't a big problem as next day all finished certs are skipped
             // user will only get email <= 14 days before expiry so acceptable for now
+            var errors = new List<Exception>();
             foreach ((var name, var config) in configurations)
             {
                 using (log.BeginScope($"Working on certificates from {name}"))
@@ -89,6 +102,7 @@ namespace LetsEncrypt.Func
                         stopwatch.Restart();
                         var hostNames = string.Join(";", cert.HostNames);
                         cert.Overrides = overrides ?? Overrides.None;
+                        cert.Overrides.UpdateResource = true;
                         try
                         {
                             var result = await renewalService.RenewCertificateAsync(config.Acme, cert, cancellationToken);
@@ -107,6 +121,7 @@ namespace LetsEncrypt.Func
                         catch (Exception e)
                         {
                             log.LogError(e, $"Certificate renewal failed for: {hostNames}!");
+                            errors.Add(e);
                         }
                         log.LogInformation($"Renewing certificates for {hostNames} took: {stopwatch.Elapsed}");
                     }
@@ -116,6 +131,8 @@ namespace LetsEncrypt.Func
             {
                 log.LogWarning("No configurations where processed, refere to the sample on how to set up configs!");
             }
+            if (errors.Any())
+                throw new AggregateException("Failed to process all certificates", errors);
         }
 
         private static async Task<IEnumerable<(string configName, Configuration)>> LoadConfigFilesAsync(

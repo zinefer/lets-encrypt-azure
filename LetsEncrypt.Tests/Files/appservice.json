@@ -1,0 +1,17 @@
+{
+    "acme": {
+        "email": "you@example.com"
+    },
+    "certificates": [
+        {
+            "hostNames": [
+                "example.com",
+                "www.example.com"
+            ],
+            "targetResource": {
+                "type": "appService",
+                "name": "example"
+            }
+        }
+    ]
+}
