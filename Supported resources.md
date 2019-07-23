@@ -94,13 +94,16 @@ As per the [App Service documentation](https://azure.github.io/AppService/2016/0
 1) Register Web App as an app in your Azure Active Directory (AAD) via PowerShell using this command: New-AzureRmADServicePrincipal -ApplicationId "abfa0a7c-a6b6-4736-8310-5855508787cd" (this is a tenant wide one-time action).
 2) Grant Web App service the permission to access the secrets in your Key vault. Go to “Access policies” from your Key vault to add a new policy, then grant “Microsoft.Azure.WebSites” service principal **secret get** permission (get secret will allow the App Service to access the certificates as each certificate has a secret alias).
 
+Additionally the azure function needs these specific RBAC permissions:
+
+* `Contributor` - required on every **resourcegroup** containing the **app service plans** (needed because certificates are synced between keyvault and app service plan and are stored next to app service plan)
+* `Keyvault Contributor` - on every keyvault where certificates are stored (this is required on top of the Get, List, Import & Update certificate access policies)
+* `Reader` - on any resourcegroup containing webapps (needed to list webapps)
+* `Website contributor` - on every webapp to update hostbinding with certificate
+
+If you have all the above resources in the same resourcegroup, then it's enough to grant `Contributor` rights on the resourcegroup.
+
 Note that RBAC changes may take up to 10 minutes to update.
-
-The certificate must also be transfered from storage to an azure resource. Currently it is stored next to the app service plan (name pattern: "%firstHostname%-%thumbprint%").
-
-To ensure the azure function can store the certificate, it requires to be TODO?? `Contributor` in the resourcegroup.
-
-Finally the azure function requires TODO?? `Contributor` permissions on each webapp as it must assign the SSL bindings from the webapp to its uploaded certificate.
 
 **Challenge file access**
 

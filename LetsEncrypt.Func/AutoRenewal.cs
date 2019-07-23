@@ -102,7 +102,6 @@ namespace LetsEncrypt.Func
                         stopwatch.Restart();
                         var hostNames = string.Join(";", cert.HostNames);
                         cert.Overrides = overrides ?? Overrides.None;
-                        cert.Overrides.UpdateResource = true;
                         try
                         {
                             var result = await renewalService.RenewCertificateAsync(config.Acme, cert, cancellationToken);

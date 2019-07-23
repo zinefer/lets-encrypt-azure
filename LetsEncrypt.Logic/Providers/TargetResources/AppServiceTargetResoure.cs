@@ -104,13 +104,15 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             string uploadCertName,
             CancellationToken cancellationToken)
         {
+            var appServiceResourceGroup = ParseResourceGroupFromResourceId(prop.ServerFarmId);
+
             // documentation used to be adamant about keeping cert next to app service plan, but seems its now also possible to keep it next to web app itself
             // (cert can never be moved once it is bound); keep next to app service plan for now
-            var appServiceResourceGroup = ParseResourceGroupFromResourceId(prop.ServerFarmId);
+            var resourceGroupForStoringCertificate = appServiceResourceGroup;
 
             var certificateUploadUrl = "https://management.azure.com" +
                     $"/subscriptions/{_azureHelper.GetSubscriptionId()}/" +
-                    $"resourceGroups/{appServiceResourceGroup}/" +
+                    $"resourceGroups/{resourceGroupForStoringCertificate}/" +
                     $"providers/Microsoft.Web/certificates/{uploadCertName}?api-version=2018-11-01";
             var content = new StringContent(JsonConvert.SerializeObject(new
             {
@@ -124,7 +126,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             }), Encoding.UTF8, "application/json");
 
             var response = await httpClient.PutAsync(certificateUploadUrl, content, cancellationToken);
-            await response.EnsureSuccessAsync($"Failed to upload certificate {uploadCertName} to resource group {_resourceGroupName}.");
+            await response.EnsureSuccessAsync($"Failed to upload certificate {uploadCertName} to resource group {resourceGroupForStoringCertificate}.");
         }
 
         private async Task<AppServiceProperties> GetAppServicePropertiesAsync(HttpClient httpClient, CancellationToken cancellationToken)
