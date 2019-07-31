@@ -96,12 +96,12 @@ As per the [App Service documentation](https://azure.github.io/AppService/2016/0
 
 Additionally the azure function needs these specific RBAC permissions:
 
-* `Contributor` - required on every **resourcegroup** containing the **app service plans** (needed because certificates are synced between keyvault and app service plan and are stored next to app service plan)
-* `Keyvault Contributor` - on every keyvault where certificates are stored (this is required on top of the Get, List, Import & Update certificate access policies)
+* `Contributor` - required on every **resourcegroup** containing the **app service plans** (needed because certificates are synced between keyvault and app service plan and are stored next to app service plan as a seperate azure resource as well. also needed to delete the old certificates on renewal)
+* `Keyvault Contributor` - on every keyvault where certificates are stored (this is required on top of the Get, List, Import & Update certificate access policies) (needed to link the certificate from inside the keyvault to the azure certificate resource next to the app service plan)
 * `Reader` - on any resourcegroup containing webapps (needed to list webapps)
 * `Website contributor` - on every webapp to update hostbinding with certificate
 
-If you have all the above resources in the same resourcegroup, then it's enough to grant `Contributor` rights on the resourcegroup.
+If you have all the above resources in the same resourcegroup, then it's enough to grant `Contributor` rights on the resourcegroup level for the azure function MSI.
 
 Note that RBAC changes may take up to 10 minutes to update.
 
@@ -109,7 +109,7 @@ Note that RBAC changes may take up to 10 minutes to update.
 
 Let's Encrypt will want to access `<your domain>/.well-known/acme-challenge/*` during certificate renewal.
 
-Since this azure function (purposefully) has no write access to any of your app services, you must use redirects and blob storage to make the challenge files accessible to Let's Encrypt.
+Since this azure function (purposefully) has no write access to any of your app services (nor does it make any attempt to do so), you must use redirects and blob storage to make the challenge files accessible to Let's Encrypt.
 
 Here's an example how it can be done with a web.config/IIS rewrite rules:
 ``` xml
@@ -132,7 +132,7 @@ In order to use the `$web` container you must to turn on the [static website fea
 
 Alternatively you can use a regular container and make it publicly accessible (the URL would then be `https://<storageName>.blob.core.windows.net/<containerName>/.well-known/acme-challenge/{R:1}`), but I recommend the use of `$web` as it is very clear that its content can be accessed by anyone via the internet).
 
-If you opt for the (recommended) MSI based storage access (see [sample.json](./LetsEncrypt.Func/sample.json) for the alternatives), then the function MSI must also be `Storage Blob Data Contributor` on every storage container used by the Azure CDN (defaults to `$web` container).
+If you opt for the (recommended) MSI based storage access (see [sample.json](./LetsEncrypt.Func/sample.json) for the alternatives), then the function MSI must also be `Storage Blob Data Contributor` on the used storage container.
 
 Once the redirection is enabled, any requests to your webapp hitting the `.well-known/acme-challenge/*` path should be redirected to storage.
 
