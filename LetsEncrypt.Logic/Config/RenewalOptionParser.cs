@@ -178,7 +178,7 @@ namespace LetsEncrypt.Logic.Config
                         var rg = props.ResourceGroupName;
                         if (string.IsNullOrEmpty(rg))
                             rg = props.Name;
-                        return new AppServiceTargetResoure(_azureHelper, rg, props.Name);
+                        return new AppServiceTargetResoure(_azureHelper, rg, props.Name, _log);
                     }
                 default:
                     throw new NotImplementedException(cfg.TargetResource.Type);

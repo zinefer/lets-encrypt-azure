@@ -51,7 +51,7 @@ namespace LetsEncrypt.Logic.Storage
 
         public async Task<string[]> ListAsync(string prefix, CancellationToken cancellationToken)
         {
-            var container = await GetContainerAsync(false, cancellationToken);
+            var container = await GetContainerAsync(true, cancellationToken);
 
             var list = new List<string>();
             BlobContinuationToken token = null;

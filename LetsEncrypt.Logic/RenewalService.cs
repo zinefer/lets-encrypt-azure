@@ -112,7 +112,8 @@ namespace LetsEncrypt.Logic
                 var isStillValid = existingCert.Expires.Value.AddDays(-options.RenewXDaysBeforeExpiry) > now;
                 if (isValidAlready && isStillValid)
                 {
-                    _log.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is still valid until {existingCert.Expires.Value}. Skipping renewal.");
+                    _log.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is still valid until {existingCert.Expires.Value}. " +
+                        $"Will be renewed in {(int)(existingCert.Expires.Value - now).TotalDays - options.RenewXDaysBeforeExpiry} days. Skipping renewal.");
                     return existingCert;
                 }
                 var reason = !isValidAlready ?
