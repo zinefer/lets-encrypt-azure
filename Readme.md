@@ -37,7 +37,7 @@ Please see the individual `targetResources` in [Supportes resources](./Supported
 
 ## Deploy
 
-The [azure-pipelines.yaml](./azure-pipelines.yaml) contains the full infrastructure and code deployment, all you need to do is modify the variables (custom resourcegroup name) and run it.
+The [azure-pipelines.yml](./azure-pipelines.yml) contains the full infrastructure and code deployment, all you need to do is modify the variables (custom resourcegroup name) and run it.
 
 Alternatively you can execute the same steps manually from your machine using Az powershell module and Visual Studio.
 

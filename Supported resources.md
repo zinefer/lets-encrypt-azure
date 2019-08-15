@@ -1,6 +1,6 @@
 # Supported resources
 
-The function runs of config files in the storage container; a short example (see [sample.json](./LetsEncrypt.Func/sample.json) for a more detailed config example):
+The function runs off config files in the storage container; a short example (see [sample.json](./LetsEncrypt.Func/sample.json) for a more detailed config example):
 
 ``` json
 {
