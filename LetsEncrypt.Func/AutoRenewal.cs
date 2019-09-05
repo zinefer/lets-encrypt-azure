@@ -65,7 +65,7 @@ namespace LetsEncrypt.Func
         /// <returns></returns>
         [FunctionName("renew")]
         public static Task RenewAsync(
-          [TimerTrigger(Schedule.Daily, RunOnStartup = true)] TimerInfo timer,
+          [TimerTrigger(Schedule.Daily)] TimerInfo timer,
           ILogger log,
           CancellationToken cancellationToken)
             => RenewAsync((Overrides)null, log, cancellationToken);
@@ -134,7 +134,7 @@ namespace LetsEncrypt.Func
                 throw new AggregateException("Failed to process all certificates", errors);
         }
 
-        private static async Task<IEnumerable<(string configName, Configuration)>> LoadConfigFilesAsync(
+        internal static async Task<IEnumerable<(string configName, Configuration)>> LoadConfigFilesAsync(
             IStorageProvider storageProvider,
             IConfigurationProcessor processor,
             ILogger log,
