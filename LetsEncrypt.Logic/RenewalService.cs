@@ -120,7 +120,7 @@ namespace LetsEncrypt.Logic
                     $"certificate won't be valid until {existingCert.NotBefore}" :
                     $"renewal is demanded {options.RenewXDaysBeforeExpiry} days before expiry and it is currently {(int)(existingCert.Expires.Value - now).TotalDays} days before expiry";
 
-                _log.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is not valid ({reason}).");
+                _log.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is not longer up to date ({reason}).");
             }
             // either no cert or expired
             return null;

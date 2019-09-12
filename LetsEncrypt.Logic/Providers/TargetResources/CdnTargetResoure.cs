@@ -152,10 +152,13 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
 
         private class CdnParam
         {
+            [JsonProperty("certificateSource")]
             public string CertificateSource => "AzureKeyVault";
 
+            [JsonProperty("protocolType")]
             public string ProtocolType => "ServerNameIndication";
 
+            [JsonProperty("certificateSourceParameters")]
             public CertSource CertificateSourceParameters { get; set; }
         }
 
@@ -164,18 +167,25 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             [JsonProperty("@odata.type")]
             public string Type => "#Microsoft.Azure.Cdn.Models.KeyVaultCertificateSourceParameters";
 
+            [JsonProperty("resourceGroupName")]
             public string ResourceGroupName { get; set; }
 
+            [JsonProperty("secretName")]
             public string SecretName { get; set; }
 
+            [JsonProperty("secretVersion")]
             public string SecretVersion { get; set; }
 
+            [JsonProperty("subscriptionId")]
             public string SubscriptionId { get; set; }
 
+            [JsonProperty("vaultName")]
             public string VaultName { get; set; }
 
+            [JsonProperty("updateRule")]
             public string UpdateRule => "NoAction";
 
+            [JsonProperty("deleteRule")]
             public string DeleteRule => "NoAction";
         }
     }

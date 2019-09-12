@@ -40,7 +40,8 @@
         // everything specified explicitely + connection string in keyvault (MSI should be tried, fails and falls back to keyvault)
         {
             "hostNames": [
-                "letsencrypt-integration-03.marcstan.net"
+                "letsencrypt-integration-03.marcstan.net",
+                "www.letsencrypt-integration-03.marcstan.net"
             ],
             "challengeResponder": {
                 "type": "storageAccount",
