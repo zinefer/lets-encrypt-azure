@@ -170,10 +170,10 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             [JsonProperty("resourceGroupName")]
             public string ResourceGroupName { get; set; }
 
-            [JsonProperty("secretName")]
+            [JsonProperty("SecretName")]
             public string SecretName { get; set; }
 
-            [JsonProperty("secretVersion")]
+            [JsonProperty("SecretVersion")]
             public string SecretVersion { get; set; }
 
             [JsonProperty("subscriptionId")]
