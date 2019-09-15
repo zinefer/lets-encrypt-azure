@@ -72,7 +72,9 @@ stages:
     pool:
       name: 'Hosted Windows 2019 with VS2019'
     variables:
-      ResourceGroupName: 'letsencrypt-func'
+    - group: 'Deployment Credentials'
+    - name: ResourceGroupName
+      value: 'letsencrypt-func'
 
     steps:
     - task: DownloadPipelineArtifact@1
@@ -106,7 +108,9 @@ stages:
     pool:
       name: 'Hosted Windows 2019 with VS2019'
     variables:
-      ResourceGroupName: 'letsencrypt-integration'
+    - group: 'Deployment Credentials'
+    - name: ResourceGroupName
+      value: 'letsencrypt-integration'
 
     steps:
     - task: DownloadPipelineArtifact@1
