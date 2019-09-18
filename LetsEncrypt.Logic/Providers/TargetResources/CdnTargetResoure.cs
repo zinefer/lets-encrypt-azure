@@ -106,13 +106,13 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
                 .SelectMany(e => e.properties.customDomains, (endpoint, domain) =>
             {
                 // https://github.com/Azure/azure-rest-api-specs/blob/master/specification/cdn/resource-manager/Microsoft.Cdn/stable/2019-04-15/examples/CustomDomains_EnableCustomHttpsUsingBYOC.json
-
+                // switched to older API as per https://stackoverflow.com/a/56147987 since 2019-04-15 sometimes just removes the certificate without updating it..
                 var url = "https://management.azure.com" +
                     $"/subscriptions/{_azureHelper.GetSubscriptionId()}/" +
                     $"resourceGroups/{_resourceGroupName}/" +
                     $"providers/Microsoft.Cdn/profiles/{Name}/" +
                     $"endpoints/{endpoint.name}/customDomains/" +
-                    $"{domain.name}/enableCustomHttps?api-version=2019-04-15";
+                    $"{domain.name}/enableCustomHttps?api-version=2018-04-02";
 
                 var settings = new JsonSerializerSettings
                 {
