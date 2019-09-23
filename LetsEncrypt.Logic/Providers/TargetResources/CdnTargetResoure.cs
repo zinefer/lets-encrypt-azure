@@ -36,6 +36,9 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             if (cert.Store.Type != "keyVault")
                 throw new NotSupportedException("Azure CDN can only use certificates from store keyVault. Found: " + cert.Store.Type);
 
+            // testing sleep after cert is uploaded to possibly working around a bug..
+            await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+
             // use REST directly because nuget packages don't contain the required endpoint to update CDN yet
             // fluent api would be nicer to use (mgmt api preview package already offers new endpoints, but fluent api does not)
             // but problematic: neither api supports fallback from MSI to local user (both requiring MSI_ENDPOINT env variable)
