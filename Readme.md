@@ -2,9 +2,7 @@
 
 Automatically issue Let's Encrypt SSL certificates for all your custom domain names in Azure.
 
-[Go to release](https://dev.azure.com/marcstanlive/Opensource/_build/definition?definitionId=31) 
-
-![LetsEncrypt.Azure](https://dev.azure.com/marcstanlive/Opensource/_apis/build/status/31)
+[![LetsEncrypt.Azure](https://dev.azure.com/marcstanlive/Opensource/_apis/build/status/31)](https://dev.azure.com/marcstanlive/Opensource/_build/definition?definitionId=31)
 
 # Motivation
 

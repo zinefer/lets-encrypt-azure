@@ -106,9 +106,9 @@ namespace LetsEncrypt.Logic
                     throw new NotSupportedException($"Missing expiration value on certificate {existingCert.Name} (provider: {certStore.Type}). " +
                         "Must be set to expiration date of the certificate.");
 
-                var now = DateTime.UtcNow.Date;
+                var now = DateTime.UtcNow;
                 // must be valid now and some day in the future based on config expiration rule
-                var isValidAlready = !existingCert.NotBefore.HasValue || existingCert.NotBefore < now;
+                var isValidAlready = !existingCert.NotBefore.HasValue || existingCert.NotBefore.Value < now;
                 var isStillValid = existingCert.Expires.Value.Date.AddDays(-options.RenewXDaysBeforeExpiry) >= now;
                 if (isValidAlready && isStillValid)
                 {
@@ -120,7 +120,7 @@ namespace LetsEncrypt.Logic
                     $"certificate won't be valid until {existingCert.NotBefore}" :
                     $"renewal is demanded {options.RenewXDaysBeforeExpiry} days before expiry and it is currently {(int)(existingCert.Expires.Value - now).TotalDays} days before expiry";
 
-                _log.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is not longer up to date ({reason}).");
+                _log.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is no longer up to date ({reason}).");
             }
             // either no cert or expired
             return null;

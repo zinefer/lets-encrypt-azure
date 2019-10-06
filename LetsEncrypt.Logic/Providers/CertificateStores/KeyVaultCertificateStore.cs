@@ -56,7 +56,7 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
             var cert = LoadFrom(pfxBytes, password);
             var base64 = Convert.ToBase64String(pfxBytes);
             var now = DateTime.UtcNow;
-            var attr = new CertificateAttributes(true, now, cert.NotAfter, now);
+            var attr = new CertificateAttributes(true, cert.NotBefore, cert.NotAfter, now);
             var r = await ImportCertificateAsync(base64, password, attr, cancellationToken);
             return new CertificateInfo(r, this);
         }
