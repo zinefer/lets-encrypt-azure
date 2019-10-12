@@ -36,8 +36,11 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             if (cert.Store.Type != "keyVault")
                 throw new NotSupportedException("Azure CDN can only use certificates from store keyVault. Found: " + cert.Store.Type);
 
-            // testing sleep after cert is uploaded to possibly working around a bug..
-            await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+            // CDN seems to not like certs that have just been uploaded
+            // checking if waiting a long time fixes the issue
+            // note that overall max execution time is 10min
+            // TODO: might have to use durable functions to make this scale with many renewals
+            await Task.Delay(TimeSpan.FromMinutes(2), cancellationToken);
 
             // use REST directly because nuget packages don't contain the required endpoint to update CDN yet
             // fluent api would be nicer to use (mgmt api preview package already offers new endpoints, but fluent api does not)
