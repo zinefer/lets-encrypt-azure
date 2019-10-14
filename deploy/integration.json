@@ -20,7 +20,8 @@
         "endpointName2": "[toLower(concat(resourceGroup().name, '-02'))]",
         "storageAccountName3": "[toLower(concat(replace(resourceGroup().name, '-', ''), '03'))]",
         "cdnName3": "[toLower(concat(resourceGroup().name, '-03'))]",
-        "endpointName3": "[toLower(concat(resourceGroup().name, '-03'))]"
+        "endpointName3": "[toLower(concat(resourceGroup().name, '-03'))]",
+        "endpointName3_2": "[toLower(concat('www.', resourceGroup().name, '-03'))]"
     },
     "resources": [
         {
@@ -216,6 +217,18 @@
                             ],
                             "properties": {
                                 "hostName": "[concat(variables('endpointName3'), '.', parameters('domain'))]"
+                            }
+                        },
+                        {
+                            "type": "customdomains",
+                            "apiVersion": "2016-04-02",
+                            "name": "[replace(concat(variables('endpointName3_2'), '.', parameters('domain')), '.', '-')]",
+                            "dependsOn": [
+                                "[resourceId('Microsoft.Cdn/profiles/endpoints', variables('cdnName3'), variables('endpointName3_2'))]",
+                                "[resourceId('Microsoft.Cdn/profiles', variables('endpointName3_2'))]"
+                            ],
+                            "properties": {
+                                "hostName": "[concat(variables('endpointName3_2'), '.', parameters('domain'))]"
                             }
                         }
                     ]
