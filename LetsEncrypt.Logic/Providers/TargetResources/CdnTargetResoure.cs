@@ -2,6 +2,7 @@
 using LetsEncrypt.Logic.Extensions;
 using LetsEncrypt.Logic.Providers.CertificateStores;
 using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
@@ -18,13 +19,15 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
         private readonly string _resourceGroupName;
         private readonly string[] _endpoints;
         private readonly IAzureHelper _azureHelper;
+        private readonly ILogger _logger;
 
-        public CdnTargetResoure(IAzureHelper azureHelper, string resourceGroupName, string name, string[] endpoints)
+        public CdnTargetResoure(IAzureHelper azureHelper, string resourceGroupName, string name, string[] endpoints, ILogger logger)
         {
             _azureHelper = azureHelper ?? throw new ArgumentNullException(nameof(azureHelper));
             _resourceGroupName = resourceGroupName ?? throw new ArgumentNullException(nameof(resourceGroupName));
             Name = name ?? throw new ArgumentNullException(nameof(name));
             _endpoints = endpoints ?? throw new ArgumentNullException(nameof(endpoints));
+            _logger = logger;
         }
 
         public string Name { get; }
@@ -40,6 +43,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             // checking if waiting a long time fixes the issue
             // note that overall max execution time is 10min
             // TODO: might have to use durable functions to make this scale with many renewals
+            _logger.LogInformation("Waiting 2 minutes before deploying certificate to CDN");
             await Task.Delay(TimeSpan.FromMinutes(2), cancellationToken);
 
             // use REST directly because nuget packages don't contain the required endpoint to update CDN yet

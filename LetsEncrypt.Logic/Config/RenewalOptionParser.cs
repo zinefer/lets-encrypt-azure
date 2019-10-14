@@ -24,19 +24,19 @@ namespace LetsEncrypt.Logic.Config
 
         private readonly IAzureHelper _azureHelper;
         private readonly IKeyVaultClient _keyVaultClient;
-        private readonly ILogger _log;
+        private readonly ILogger _logger;
         private readonly IStorageFactory _storageFactory;
 
         public RenewalOptionParser(
             IAzureHelper azureHelper,
             IKeyVaultClient keyVaultClient,
             IStorageFactory storageFactory,
-            ILogger log)
+            ILogger logger)
         {
             _azureHelper = azureHelper ?? throw new ArgumentNullException(nameof(azureHelper));
             _keyVaultClient = keyVaultClient ?? throw new ArgumentNullException(nameof(keyVaultClient));
             _storageFactory = storageFactory ?? throw new ArgumentNullException(nameof(storageFactory));
-            _log = log ?? throw new ArgumentNullException(nameof(log));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public async Task<IChallengeResponder> ParseChallengeResponderAsync(CertificateRenewalOptions cfg, CancellationToken cancellationToken)
@@ -77,7 +77,7 @@ namespace LetsEncrypt.Logic.Config
                     }
                     catch (StorageException e) when (e.RequestInformation.HttpStatusCode == (int)HttpStatusCode.Forbidden)
                     {
-                        _log.LogWarning($"MSI access to storage {accountName} failed. Attempting fallbacks via connection string. (You can ignore this warning if you don't use MSI authentication).");
+                        _logger.LogWarning($"MSI access to storage {accountName} failed. Attempting fallbacks via connection string. (You can ignore this warning if you don't use MSI authentication).");
                         var connectionString = props.ConnectionString;
                         if (string.IsNullOrEmpty(connectionString))
                         {
@@ -86,7 +86,7 @@ namespace LetsEncrypt.Logic.Config
                             if (string.IsNullOrEmpty(keyVaultName))
                                 keyVaultName = certStore.Name;
 
-                            _log.LogInformation($"No connection string in config, checking keyvault {keyVaultName} secret {props.SecretName}");
+                            _logger.LogInformation($"No connection string in config, checking keyvault {keyVaultName} secret {props.SecretName}");
                             connectionString = await GetSecretAsync(keyVaultName, props.SecretName, cancellationToken);
                         }
                         if (string.IsNullOrEmpty(connectionString))
@@ -160,7 +160,7 @@ namespace LetsEncrypt.Logic.Config
                         if (endpoints.IsNullOrEmpty())
                             endpoints = new[] { props.Name };
 
-                        return new CdnTargetResoure(_azureHelper, rg, props.Name, endpoints);
+                        return new CdnTargetResoure(_azureHelper, rg, props.Name, endpoints, _logger);
                     }
                 case "appservice":
                     {
@@ -178,7 +178,7 @@ namespace LetsEncrypt.Logic.Config
                         var rg = props.ResourceGroupName;
                         if (string.IsNullOrEmpty(rg))
                             rg = props.Name;
-                        return new AppServiceTargetResoure(_azureHelper, rg, props.Name, _log);
+                        return new AppServiceTargetResoure(_azureHelper, rg, props.Name, _logger);
                     }
                 default:
                     throw new NotImplementedException(cfg.TargetResource.Type);
@@ -205,7 +205,7 @@ namespace LetsEncrypt.Logic.Config
             {
                 if (ex.Response.StatusCode == HttpStatusCode.Forbidden)
                 {
-                    _log.LogError(ex, $"Access forbidden. Unable to get secret from keyvault {keyVaultName}");
+                    _logger.LogError(ex, $"Access forbidden. Unable to get secret from keyvault {keyVaultName}");
                     throw;
                 }
                 if (ex.Response.StatusCode == HttpStatusCode.NotFound ||
@@ -216,7 +216,7 @@ namespace LetsEncrypt.Logic.Config
             }
             catch (HttpRequestException e)
             {
-                _log.LogError(e, $"Unable to get secret from keyvault {keyVaultName}");
+                _logger.LogError(e, $"Unable to get secret from keyvault {keyVaultName}");
                 throw;
             }
         }
