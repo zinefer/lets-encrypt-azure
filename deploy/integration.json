@@ -224,7 +224,7 @@
                             "apiVersion": "2016-04-02",
                             "name": "[replace(concat(variables('endpointName3_2'), '.', parameters('domain')), '.', '-')]",
                             "dependsOn": [
-                                "[resourceId('Microsoft.Cdn/profiles/endpoints', variables('cdnName3'), variables('endpointName3_2'))]",
+                                "[resourceId('Microsoft.Cdn/profiles/endpoints', variables('cdnName3'), variables('endpointName3'))]",
                                 "[resourceId('Microsoft.Cdn/profiles', variables('endpointName3'))]"
                             ],
                             "properties": {
