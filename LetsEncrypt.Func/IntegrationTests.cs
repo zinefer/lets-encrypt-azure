@@ -16,6 +16,7 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using ExecutionContext = Microsoft.Azure.WebJobs.ExecutionContext;
 
 namespace LetsEncrypt.Func
 {
@@ -33,11 +34,11 @@ namespace LetsEncrypt.Func
           [TimerTrigger(Schedule.TwiceDaily)] TimerInfo timer,
           ILogger log,
           CancellationToken cancellationToken,
-          Microsoft.Azure.WebJobs.ExecutionContext executionContext)
+          ExecutionContext executionContext)
             => CheckDomainsForValidCertificateAsync(log, cancellationToken, executionContext);
 
         private static async Task CheckDomainsForValidCertificateAsync(ILogger log, CancellationToken cancellationToken,
-            Microsoft.Azure.WebJobs.ExecutionContext executionContext)
+            ExecutionContext executionContext)
         {
             // internal storage (used for letsencrypt account metadata)
             IStorageProvider storageProvider = new AzureBlobStorageProvider(Environment.GetEnvironmentVariable("AzureWebJobsStorage"), "letsencrypt");

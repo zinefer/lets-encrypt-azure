@@ -17,6 +17,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using ExecutionContext = Microsoft.Azure.WebJobs.ExecutionContext;
 
 namespace LetsEncrypt.Func
 {
@@ -34,7 +35,7 @@ namespace LetsEncrypt.Func
             [HttpTrigger(AuthorizationLevel.Function, "POST", Route = "")] HttpRequestMessage req,
             ILogger log,
             CancellationToken cancellationToken,
-            Microsoft.Azure.WebJobs.ExecutionContext executionContext)
+            ExecutionContext executionContext)
         {
             var q = req.RequestUri.ParseQueryString();
             var overrides = new Overrides
@@ -69,11 +70,11 @@ namespace LetsEncrypt.Func
           [TimerTrigger(Schedule.Daily)] TimerInfo timer,
           ILogger log,
           CancellationToken cancellationToken,
-          Microsoft.Azure.WebJobs.ExecutionContext executionContext)
+          ExecutionContext executionContext)
             => RenewAsync((Overrides)null, log, cancellationToken, executionContext);
 
         private static async Task RenewAsync(Overrides overrides, ILogger log, CancellationToken cancellationToken,
-          Microsoft.Azure.WebJobs.ExecutionContext executionContext)
+          ExecutionContext executionContext)
         {
             // internal storage (used for letsencrypt account metadata)
             IStorageProvider storageProvider = new AzureBlobStorageProvider(Environment.GetEnvironmentVariable("AzureWebJobsStorage"), "letsencrypt");
@@ -142,7 +143,7 @@ namespace LetsEncrypt.Func
             IConfigurationProcessor processor,
             ILogger log,
             CancellationToken cancellationToken,
-            Microsoft.Azure.WebJobs.ExecutionContext executionContext)
+            ExecutionContext executionContext)
 
         {
             var configs = new List<(string, Configuration)>();

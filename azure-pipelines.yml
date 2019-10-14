@@ -15,7 +15,9 @@ schedules:
   branches:
     include:
     - master
-
+variables:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  
 stages:
 - stage: build
   jobs:
