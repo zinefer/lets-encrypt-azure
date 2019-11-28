@@ -1,0 +1,25 @@
+{
+    "acme": {
+        "email": "you@example.com"
+    },
+    "certificates": [
+        {
+          "hostNames": [
+            "example.com",
+            "www.example.com"
+          ],
+          "challengeResponder": {
+            "type": "storageAccount",
+            "properties": {
+              // should be respected
+              "containerName": "notWeb",
+              "path": "not/well-known"
+            }
+          },
+            "targetResource": {
+                "type": "cdn",
+                "name": "example"
+            }
+        }
+    ]
+}

@@ -94,7 +94,7 @@ namespace LetsEncrypt.Logic.Config
 
                         storage = _storageFactory.FromConnectionString(connectionString, props.ContainerName);
                     }
-                    return new AzureStorageHttpChallengeResponder(storage);
+                    return new AzureStorageHttpChallengeResponder(storage, props.Path);
                 default:
                     throw new NotImplementedException(cr.Type);
             }

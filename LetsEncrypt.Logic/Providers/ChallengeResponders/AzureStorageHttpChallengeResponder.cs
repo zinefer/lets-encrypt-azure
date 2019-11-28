@@ -15,10 +15,14 @@ namespace LetsEncrypt.Logic.Providers.ChallengeResponders
     public class AzureStorageHttpChallengeResponder : IChallengeResponder
     {
         private readonly IStorageProvider _storageProvider;
+        private readonly string _pathPrefix;
 
-        public AzureStorageHttpChallengeResponder(IStorageProvider storageProvider)
+        public AzureStorageHttpChallengeResponder(IStorageProvider storageProvider, string pathInContainer)
         {
             _storageProvider = storageProvider ?? throw new ArgumentNullException(nameof(storageProvider));
+            _pathPrefix = pathInContainer ?? throw new ArgumentNullException(nameof(pathInContainer));
+            if (!_pathPrefix.EndsWith("/"))
+                _pathPrefix += "/";
         }
 
         public async Task<IChallengeContext[]> InitiateChallengesAsync(IOrderContext order, CancellationToken cancellationToken)
@@ -37,12 +41,12 @@ namespace LetsEncrypt.Logic.Providers.ChallengeResponders
 
         public Task CleanupAsync(IChallengeContext[] challengeContexts, CancellationToken cancellationToken)
         {
-            return Task.WhenAll(challengeContexts.Select(c => _storageProvider.DeleteAsync($".well-known/acme-challenge/{c.Token}", cancellationToken)));
+            return Task.WhenAll(challengeContexts.Select(c => _storageProvider.DeleteAsync(_pathPrefix + c.Token, cancellationToken)));
         }
 
         private Task PersistFileChallengeAsync((string fileName, string content)[] wellKnownChallengeFiles, CancellationToken cancellationToken)
         {
-            return Task.WhenAll(wellKnownChallengeFiles.Select(c => _storageProvider.SetAsync($".well-known/acme-challenge/{c.fileName}", c.content, cancellationToken)));
+            return Task.WhenAll(wellKnownChallengeFiles.Select(c => _storageProvider.SetAsync(_pathPrefix + c.fileName, c.content, cancellationToken)));
         }
     }
 }
