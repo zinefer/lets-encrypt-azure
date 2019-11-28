@@ -46,7 +46,7 @@
             "challengeResponder": {
                 "type": "storageAccount",
                 "properties": {
-                    "container": "$web",
+                    "containerName": "$web",
                     "path": ".well-known/acme-challenge/",
                     // used for connection string access (will look for secret "Storage" to contain storage account connectionstring)
                     "keyVaultName": "letsencrypt-integration"

@@ -27,7 +27,7 @@
         "properties": {
           // assumes static website is enabled on the storage account by default
           // defaults to $web if not set
-          "container": "$web",
+          "containerName": "$web",
           // assumes standard letsencrypt folder
           // defaults to path listed below if not set
           "path": ".well-known/acme-challenge/",
@@ -114,7 +114,7 @@
         "properties": {
           // assumes static website is enabled on the storage account by default
           // defaults to $web if not set
-          "container": "$web",
+          "containerName": "$web",
           // assumes standard letsencrypt folder
           // defaults to path listed below if not set
           "path": ".well-known/acme-challenge/",
