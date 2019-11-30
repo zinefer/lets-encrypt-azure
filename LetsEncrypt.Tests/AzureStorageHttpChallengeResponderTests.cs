@@ -1,6 +1,6 @@
 ﻿using Certes.Acme;
 using FluentAssertions;
-using LetsEncrypt.Logic;
+using LetsEncrypt.Logic.Azure;
 using LetsEncrypt.Logic.Config;
 using LetsEncrypt.Logic.Storage;
 using Microsoft.Azure.KeyVault;
@@ -41,6 +41,8 @@ namespace LetsEncrypt.Tests
                 new Mock<IAzureHelper>().Object,
                 new Mock<IKeyVaultClient>().Object,
                 factory.Object,
+                new Mock<IAzureAppServiceClient>().Object,
+                new Mock<IAzureCdnClient>().Object,
                 new Mock<ILogger>().Object);
             var responder = await parser.ParseChallengeResponderAsync(cert, CancellationToken.None);
 

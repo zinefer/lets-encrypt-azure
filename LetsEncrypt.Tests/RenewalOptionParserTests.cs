@@ -1,5 +1,5 @@
 ﻿using FluentAssertions;
-using LetsEncrypt.Logic;
+using LetsEncrypt.Logic.Azure;
 using LetsEncrypt.Logic.Config;
 using LetsEncrypt.Logic.Config.Properties;
 using LetsEncrypt.Logic.Storage;
@@ -36,7 +36,13 @@ namespace LetsEncrypt.Tests
                 .Returns(Task.FromResult(storage.Object));
 
             var log = new Mock<ILogger>();
-            IRenewalOptionParser parser = new RenewalOptionParser(az.Object, kv.Object, factory.Object, log.Object);
+            IRenewalOptionParser parser = new RenewalOptionParser(
+                az.Object,
+                kv.Object,
+                factory.Object,
+                new Mock<IAzureAppServiceClient>().Object,
+                new Mock<IAzureCdnClient>().Object,
+                log.Object);
 
             var cfg = TestHelper.LoadConfig("config");
             new Func<Task>(async () => _ = await parser.ParseChallengeResponderAsync(cfg.Certificates[0], CancellationToken.None)).Should().NotThrow();
@@ -68,7 +74,13 @@ namespace LetsEncrypt.Tests
                 .Returns(Task.FromResult(storage.Object));
 
             var log = new Mock<ILogger>();
-            IRenewalOptionParser parser = new RenewalOptionParser(az.Object, kv.Object, factory.Object, log.Object);
+            IRenewalOptionParser parser = new RenewalOptionParser(
+                az.Object,
+                kv.Object,
+                factory.Object,
+                new Mock<IAzureAppServiceClient>().Object,
+                new Mock<IAzureCdnClient>().Object,
+                log.Object);
 
             var cfg = TestHelper.LoadConfig("config");
             new Func<Task>(async () => _ = await parser.ParseChallengeResponderAsync(cfg.Certificates[0], CancellationToken.None)).Should().Throw<InvalidOperationException>();
@@ -104,7 +116,13 @@ namespace LetsEncrypt.Tests
                 .Returns(storage.Object);
 
             var log = new Mock<ILogger>();
-            IRenewalOptionParser parser = new RenewalOptionParser(az.Object, kv.Object, factory.Object, log.Object);
+            IRenewalOptionParser parser = new RenewalOptionParser(
+                az.Object,
+                kv.Object,
+                factory.Object,
+                new Mock<IAzureAppServiceClient>().Object,
+                new Mock<IAzureCdnClient>().Object,
+                log.Object);
 
             var cfg = TestHelper.LoadConfig("config");
             var r = await parser.ParseChallengeResponderAsync(cfg.Certificates[0], CancellationToken.None);
@@ -136,7 +154,13 @@ namespace LetsEncrypt.Tests
                 .Returns(storage.Object);
 
             var log = new Mock<ILogger>();
-            IRenewalOptionParser parser = new RenewalOptionParser(az.Object, kv.Object, factory.Object, log.Object);
+            IRenewalOptionParser parser = new RenewalOptionParser(
+                az.Object,
+                kv.Object,
+                factory.Object,
+                new Mock<IAzureAppServiceClient>().Object,
+                new Mock<IAzureCdnClient>().Object,
+                log.Object);
 
             var cfg = TestHelper.LoadConfig("config+connectionstring");
             var r = await parser.ParseChallengeResponderAsync(cfg.Certificates[0], CancellationToken.None);
@@ -154,7 +178,13 @@ namespace LetsEncrypt.Tests
             var factory = new Mock<IStorageFactory>();
 
             var log = new Mock<ILogger>();
-            IRenewalOptionParser parser = new RenewalOptionParser(az.Object, kv.Object, factory.Object, log.Object);
+            IRenewalOptionParser parser = new RenewalOptionParser(
+                az.Object,
+                kv.Object,
+                factory.Object,
+                new Mock<IAzureAppServiceClient>().Object,
+                new Mock<IAzureCdnClient>().Object,
+                log.Object);
 
             var cfg = TestHelper.LoadConfig("config");
             var store = parser.ParseCertificateStore(cfg.Certificates[0]);
@@ -170,7 +200,13 @@ namespace LetsEncrypt.Tests
             var factory = new Mock<IStorageFactory>();
 
             var log = new Mock<ILogger>();
-            IRenewalOptionParser parser = new RenewalOptionParser(az.Object, kv.Object, factory.Object, log.Object);
+            IRenewalOptionParser parser = new RenewalOptionParser(
+                az.Object,
+                kv.Object,
+                factory.Object,
+                new Mock<IAzureAppServiceClient>().Object,
+                new Mock<IAzureCdnClient>().Object,
+                log.Object);
 
             var cfg = TestHelper.LoadConfig("config");
             var target = parser.ParseTargetResource(cfg.Certificates[0]);

@@ -1,4 +1,5 @@
-﻿using LetsEncrypt.Logic.Config.Properties;
+﻿using LetsEncrypt.Logic.Azure;
+using LetsEncrypt.Logic.Config.Properties;
 using LetsEncrypt.Logic.Extensions;
 using LetsEncrypt.Logic.Providers.CertificateStores;
 using LetsEncrypt.Logic.Providers.ChallengeResponders;
@@ -26,17 +27,23 @@ namespace LetsEncrypt.Logic.Config
         private readonly IKeyVaultClient _keyVaultClient;
         private readonly ILogger _logger;
         private readonly IStorageFactory _storageFactory;
+        private readonly IAzureAppServiceClient _azureAppServiceClient;
+        private readonly IAzureCdnClient _azureCdnClient;
 
         public RenewalOptionParser(
             IAzureHelper azureHelper,
             IKeyVaultClient keyVaultClient,
             IStorageFactory storageFactory,
+            IAzureAppServiceClient azureAppServiceClient,
+            IAzureCdnClient azureCdnClient,
             ILogger logger)
         {
             _azureHelper = azureHelper ?? throw new ArgumentNullException(nameof(azureHelper));
             _keyVaultClient = keyVaultClient ?? throw new ArgumentNullException(nameof(keyVaultClient));
             _storageFactory = storageFactory ?? throw new ArgumentNullException(nameof(storageFactory));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _azureAppServiceClient = azureAppServiceClient;
+            _azureCdnClient = azureCdnClient;
         }
 
         public async Task<IChallengeResponder> ParseChallengeResponderAsync(CertificateRenewalOptions cfg, CancellationToken cancellationToken)
@@ -160,7 +167,7 @@ namespace LetsEncrypt.Logic.Config
                         if (endpoints.IsNullOrEmpty())
                             endpoints = new[] { props.Name };
 
-                        return new CdnTargetResoure(_azureHelper, rg, props.Name, endpoints, _logger);
+                        return new CdnTargetResoure(_azureCdnClient, rg, props.Name, endpoints, _logger);
                     }
                 case "appservice":
                     {
@@ -178,7 +185,7 @@ namespace LetsEncrypt.Logic.Config
                         var rg = props.ResourceGroupName;
                         if (string.IsNullOrEmpty(rg))
                             rg = props.Name;
-                        return new AppServiceTargetResoure(_azureHelper, rg, props.Name, _logger);
+                        return new AppServiceTargetResoure(_azureAppServiceClient, rg, props.Name, _logger);
                     }
                 default:
                     throw new NotImplementedException(cfg.TargetResource.Type);

@@ -1,6 +1,7 @@
 using LetsEncrypt.Logic;
 using LetsEncrypt.Logic.Acme;
 using LetsEncrypt.Logic.Authentication;
+using LetsEncrypt.Logic.Azure;
 using LetsEncrypt.Logic.Config;
 using LetsEncrypt.Logic.Storage;
 using Microsoft.AspNetCore.Mvc;
@@ -87,8 +88,10 @@ namespace LetsEncrypt.Func
             var tokenProvider = new AzureServiceTokenProvider();
             var keyVaultClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback));
             var storageFactory = new StorageFactory(az);
+            var appServiceClient = new AzureAppServiceClient(az, log);
+            var cdnClient = new AzureCdnClient(az);
 
-            var renewalOptionsParser = new RenewalOptionParser(az, keyVaultClient, storageFactory, log);
+            var renewalOptionsParser = new RenewalOptionParser(az, keyVaultClient, storageFactory, appServiceClient, cdnClient, log);
             var certificateBuilder = new CertificateBuilder();
 
             IRenewalService renewalService = new RenewalService(authenticationService, renewalOptionsParser, certificateBuilder, log);

@@ -1,4 +1,5 @@
-﻿using Microsoft.Azure.KeyVault;
+﻿using LetsEncrypt.Logic.Azure;
+using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
 using System;
 using System.Security.Cryptography.X509Certificates;

@@ -1,5 +1,5 @@
 ﻿using FluentAssertions;
-using LetsEncrypt.Logic;
+using LetsEncrypt.Logic.Azure;
 using LetsEncrypt.Tests.Helpers;
 using NUnit.Framework;
 using System;
