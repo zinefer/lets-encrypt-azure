@@ -45,20 +45,11 @@ namespace LetsEncrypt.Logic
             var hostNames = string.Join(";", cfg.HostNames);
             _logger.LogInformation($"Working on certificate for: {hostNames}");
 
-            // 1. skip if not outdated yet
+            // 1. check if valid cert exists
             var cert = await GetExistingCertificateAsync(options, cfg, cancellationToken);
 
-            if (cert != null)
-            {
-                // skipping by default causes the resource to not be updated in case of an initial error
-                // as reported by https://github.com/MarcStan/lets-encrypt-azure/issues/6
-                // TODO: must check target resource first (is latest cert in use) and only then we can safely skip
-                if (!cfg.Overrides.UpdateResource)
-                    return RenewalResult.NoChange;
-
-                _logger.LogWarning($"Override '{nameof(cfg.Overrides.UpdateResource)}' is enabled. Forcing resource update.");
-            }
-            else
+            bool updateResource = false;
+            if (cert == null)
             {
                 // 2. run Let's Encrypt challenge as cert either doesn't exist or is expired
                 _logger.LogInformation($"Issuing a new certificate for {hostNames}");
@@ -66,10 +57,31 @@ namespace LetsEncrypt.Logic
 
                 // 3. save certificate
                 cert = await GenerateAndStoreCertificateAsync(order, cfg, cancellationToken);
+                updateResource = true;
             }
 
-            // 4. update Azure resource
+            // 4. check if update is necessary
+            if (cfg.Overrides.UpdateResource)
+            {
+                _logger.LogWarning($"Override '{nameof(cfg.Overrides.UpdateResource)}' is enabled. Forcing resource update.");
+                updateResource = true;
+            }
             var resource = _renewalOptionParser.ParseTargetResource(cfg);
+            // if no update is required still check with target resource
+            // and only skip if latest cert is already used
+            // this helps if cert issuance worked but resource updated failed
+            // suggestion from https://github.com/MarcStan/lets-encrypt-azure/issues/6
+            if (!updateResource &&
+                (!resource.SupportsCertificateCheck ||
+                await resource.IsUsingCertificateAsync(cert, cancellationToken)))
+            {
+                _logger.LogWarning(resource.SupportsCertificateCheck ?
+                    $"Cannot check resource {resource.Name} ({resource.Type}). Assuming it is already using latest certificate. Skipping resource update!" :
+                    $"Resource {resource.Name} ({resource.Type}) is already using latest certificate. Skipping resource update!");
+
+                return RenewalResult.NoChange;
+            }
+            // 5. update Azure resource
             _logger.LogInformation($"Updating {resource.Name} ({resource.Type}) with certificates for {hostNames}");
             await resource.UpdateAsync(cert, cancellationToken);
 

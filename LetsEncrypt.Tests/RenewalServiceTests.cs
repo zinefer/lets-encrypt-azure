@@ -144,7 +144,7 @@ namespace LetsEncrypt.Tests
         }
 
         [Test]
-        public async Task ValidCertificateShouldNotRequestNewCertificateAndAlsoSkipResourceUpdate()
+        public async Task ValidCertificateShouldNotRequestNewCertificateAndSkipResourceUpdateIfTargetDoesNotSupportIt()
         {
             var config = TestHelper.LoadConfig("config");
             var auth = new Mock<IAuthenticationService>();
@@ -160,9 +160,14 @@ namespace LetsEncrypt.Tests
             validCert.SetupGet(x => x.Expires)
                 .Returns(DateTime.Now.AddDays(config.Acme.RenewXDaysBeforeExpiry + 1));
 
+            var resource = new Mock<ITargetResource>();
+            resource.SetupGet(x => x.SupportsCertificateCheck)
+                .Returns(false);
             // check if outdated (no, found and valid)
             parser.Setup(x => x.ParseCertificateStore(config.Certificates[0]))
                 .Returns(certStore.Object);
+            parser.Setup(x => x.ParseTargetResource(config.Certificates[0]))
+                .Returns(resource.Object);
             certStore.Setup(x => x.GetCertificateAsync(CancellationToken.None))
                 .Returns(Task.FromResult(validCert.Object));
 
@@ -171,6 +176,91 @@ namespace LetsEncrypt.Tests
             r.Should().Be(RenewalResult.NoChange);
 
             certStore.Verify(x => x.UploadAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Test]
+        public async Task ValidCertificateShouldNotRequestNewCertificateAndSkipResourceUpdateIfTargetIsUpToDate()
+        {
+            var config = TestHelper.LoadConfig("config");
+            var auth = new Mock<IAuthenticationService>();
+            var certBuilder = new Mock<ICertificateBuilder>();
+            var ctx = new Mock<IAcmeContext>();
+            var orderContext = new Mock<IOrderContext>();
+            var authContext = new AuthenticationContext(ctx.Object, config.Acme);
+            var parser = new Mock<IRenewalOptionParser>();
+            var log = new Mock<ILogger<RenewalService>>();
+            IRenewalService service = new RenewalService(auth.Object, parser.Object, certBuilder.Object, log.Object);
+            var certStore = new Mock<ICertificateStore>();
+            var validCert = new Mock<ICertificate>();
+            validCert.SetupGet(x => x.Expires)
+                .Returns(DateTime.Now.AddDays(config.Acme.RenewXDaysBeforeExpiry + 1));
+
+            var resource = new Mock<ITargetResource>();
+            resource.SetupGet(x => x.SupportsCertificateCheck)
+                .Returns(true);
+            resource.Setup(x => x.IsUsingCertificateAsync(validCert.Object, It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(true));
+            // check if outdated (no, found and valid)
+            parser.Setup(x => x.ParseCertificateStore(config.Certificates[0]))
+                .Returns(certStore.Object);
+            parser.Setup(x => x.ParseTargetResource(config.Certificates[0]))
+                .Returns(resource.Object);
+            certStore.Setup(x => x.GetCertificateAsync(CancellationToken.None))
+                .Returns(Task.FromResult(validCert.Object));
+
+            // actual run - should skip everything as cert is still valid (and assumed to be deployed already)
+            var r = await service.RenewCertificateAsync(config.Acme, config.Certificates[0], CancellationToken.None);
+            r.Should().Be(RenewalResult.NoChange);
+
+            certStore.Verify(x => x.UploadAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        /// <summary>
+        /// Instead of silently assuming that resource is using latest cert must check with the resource.
+        /// This fixes issues when cert issuance worked but deployment failed.
+        /// Manual workaround would be to use updateResource = true
+        /// https://github.com/MarcStan/lets-encrypt-azure/issues/6
+        /// </summary>
+        /// <returns></returns>
+        [Test]
+        public async Task IfLatestCertificateIsNotInUseThenResourceShouldBeUpdated()
+        {
+            var config = TestHelper.LoadConfig("config");
+            var auth = new Mock<IAuthenticationService>();
+            var certBuilder = new Mock<ICertificateBuilder>();
+            var ctx = new Mock<IAcmeContext>();
+            var orderContext = new Mock<IOrderContext>();
+            var authContext = new AuthenticationContext(ctx.Object, config.Acme);
+            var parser = new Mock<IRenewalOptionParser>();
+            var log = new Mock<ILogger<RenewalService>>();
+            IRenewalService service = new RenewalService(auth.Object, parser.Object, certBuilder.Object, log.Object);
+            var certStore = new Mock<ICertificateStore>();
+            var targetResource = new Mock<ITargetResource>();
+            var validCert = new Mock<ICertificate>();
+            targetResource.SetupGet(x => x.SupportsCertificateCheck)
+                .Returns(true);
+            targetResource.Setup(x => x.IsUsingCertificateAsync(validCert.Object, It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(false));
+            validCert.SetupGet(x => x.Expires)
+                .Returns(DateTime.Now.AddDays(config.Acme.RenewXDaysBeforeExpiry + 1));
+
+            // check if outdated (no, found and valid)
+            parser.Setup(x => x.ParseCertificateStore(config.Certificates[0]))
+                .Returns(certStore.Object);
+            certStore.Setup(x => x.GetCertificateAsync(CancellationToken.None))
+                .Returns(Task.FromResult(validCert.Object));
+
+            // update azure resource
+            parser.Setup(x => x.ParseTargetResource(config.Certificates[0]))
+                .Returns(targetResource.Object);
+
+            // actual run - must update resource with existing cert
+            // as the cert is not yet in use
+            var r = await service.RenewCertificateAsync(config.Acme, config.Certificates[0], CancellationToken.None);
+            r.Should().Be(RenewalResult.Success);
+
+            certStore.Verify(x => x.UploadAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
+            targetResource.Verify(x => x.UpdateAsync(validCert.Object, CancellationToken.None), Times.Once);
         }
 
         [Test]

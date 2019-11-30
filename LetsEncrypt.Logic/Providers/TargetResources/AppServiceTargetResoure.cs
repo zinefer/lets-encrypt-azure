@@ -32,6 +32,19 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
 
         public string Type => "App Service";
 
+        public bool SupportsCertificateCheck => false;
+
+        public async Task<bool> IsUsingCertificateAsync(ICertificate cert, CancellationToken cancellationToken)
+        {
+            var response = await _azureManagementClient.GetAppServicePropertiesAsync(_resourceGroupName, Name, cancellationToken);
+            // app service has one entry per domain, but we could have one cert that matched all
+            var matched = response.CustomDomains
+                .Where(x => x.Thumbprint.Equals(cert.Thumbprint, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            // verify that the cert covers all matching entries
+            return matched.All(x => cert.HostNames.Contains(x.HostName, StringComparison.OrdinalIgnoreCase));
+        }
+
         public async Task UpdateAsync(ICertificate cert, CancellationToken cancellationToken)
         {
             if (cert.Store.Type != "keyVault")
@@ -44,7 +57,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             // user may also provide X hostnames in cert, but then map them to Y different webapps
             // get hostnames from webapp and only return the matching set
             var hostnames = cert.HostNames
-                .Where(h => response.Hostnames.Contains(h, StringComparison.OrdinalIgnoreCase))
+                .Where(h => response.CustomDomains.Any(x => x.HostName.Equals(h, StringComparison.OrdinalIgnoreCase)))
                 .ToArray();
 
             if (!hostnames.Any())

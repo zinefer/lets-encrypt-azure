@@ -30,14 +30,23 @@ namespace LetsEncrypt.Tests
             {
                 Location = "westeurope",
                 ServerFarmId = $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/",
-                Hostnames = new[] { "example.com", "www.example.com" }
+                CustomDomains = new[]
+                {
+                    new AppServiceCustomDomain
+                    {
+                        HostName = "example.com"
+                    },
+                    new AppServiceCustomDomain
+                    {
+                        HostName = "www.example.com"
+                    }
+                }
             };
             client.Setup(x => x.GetAppServicePropertiesAsync(resourceGroupName, name, It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(asp));
             var store = new Mock<ICertificateStore>();
             var resource = new AppServiceTargetResoure(
                 client.Object,
-                store.Object,
                 resourceGroupName,
                 name,
                 new Mock<ILogger<AppServiceTargetResoure>>().Object);
@@ -79,7 +88,19 @@ namespace LetsEncrypt.Tests
             {
                 Location = "westeurope",
                 ServerFarmId = $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/",
-                Hostnames = new[] { "example.com", "www.example.com" }
+                CustomDomains = new[]
+                {
+                    new AppServiceCustomDomain
+                    {
+                        HostName = "example.com",
+                        Thumbprint = "1337"
+                    },
+                    new AppServiceCustomDomain
+                    {
+                        HostName = "www.example.com",
+                        Thumbprint = "1337"
+                    }
+                }
             };
             client.Setup(x => x.GetAppServicePropertiesAsync(resourceGroupName, name, It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(asp));
@@ -103,7 +124,6 @@ namespace LetsEncrypt.Tests
             var store = new Mock<ICertificateStore>();
             var resource = new AppServiceTargetResoure(
                 client.Object,
-                store.Object,
                 resourceGroupName,
                 name,
                 new Mock<ILogger<AppServiceTargetResoure>>().Object);
@@ -153,7 +173,14 @@ namespace LetsEncrypt.Tests
             {
                 Location = "westeurope",
                 ServerFarmId = $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/",
-                Hostnames = new[] { "abc.mydomain.com" }
+                CustomDomains = new[]
+                {
+                    new AppServiceCustomDomain
+                    {
+                        HostName = "abc.mydomain.com",
+                        Thumbprint = "old-THUMB"
+                    }
+                }
             };
             client.Setup(x => x.GetAppServicePropertiesAsync(resourceGroupName, name, It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(asp));
@@ -200,7 +227,6 @@ namespace LetsEncrypt.Tests
                 }));
             var resource = new AppServiceTargetResoure(
                 client.Object,
-                store.Object,
                 resourceGroupName,
                 name,
                 new Mock<ILogger<AppServiceTargetResoure>>().Object);

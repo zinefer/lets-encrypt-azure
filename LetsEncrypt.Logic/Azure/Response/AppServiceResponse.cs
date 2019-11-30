@@ -6,6 +6,13 @@
 
         public string ServerFarmId { get; set; }
 
-        public string[] Hostnames { get; set; }
+        public AppServiceCustomDomain[] CustomDomains { get; set; }
+    }
+
+    public class AppServiceCustomDomain
+    {
+        public string HostName { get; set; }
+
+        public string Thumbprint { get; set; }
     }
 }

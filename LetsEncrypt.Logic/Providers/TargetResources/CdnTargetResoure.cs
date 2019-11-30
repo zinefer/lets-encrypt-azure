@@ -34,6 +34,15 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
 
         public string Type => "CDN";
 
+        public bool SupportsCertificateCheck => false;
+
+        public Task<bool> IsUsingCertificateAsync(ICertificate cert, CancellationToken cancellationToken)
+        {
+            // API does not return information about currently rolled out cert
+            // additionally POP rollout takes ~6h and during that timeframe the old cert needs to be active
+            throw new NotSupportedException("CDN does not support getting currently rolled out certificate!");
+        }
+
         public async Task UpdateAsync(ICertificate cert, CancellationToken cancellationToken)
         {
             if (cert.Store.Type != "keyVault")

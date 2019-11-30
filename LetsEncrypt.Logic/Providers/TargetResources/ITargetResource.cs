@@ -15,7 +15,10 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
         /// The type of the resource.
         /// </summary>
         string Type { get; }
+        bool SupportsCertificateCheck { get; }
 
         Task UpdateAsync(ICertificate cert, CancellationToken cancellationToken);
+
+        Task<bool> IsUsingCertificateAsync(ICertificate cert, CancellationToken cancellationToken);
     }
 }
