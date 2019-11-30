@@ -53,6 +53,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             var formattedHostNames = string.Join(";", hostnames);
             // cert name should be unique in resourcegroup yet it must be possible to upload multiple certificates for the same domain to allow for cert rotation -> append thumbprint
             var hostName = hostnames.First();
+
             var certName = $"{hostName}-{cert.Thumbprint}";
 
             // documentation used to be adamant about keeping cert next to app service plan, but seems its now also possible to keep it next to web app itself (or any RG really)
@@ -74,9 +75,14 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
         {
             var certificates = await _azureManagementClient.ListCertificatesAsync(resourceGroupName, cancellationToken);
 
-            var certificatesToDelete = certificates.
-                Where(c => !cert.Thumbprint.Equals(c.Thumbprint, StringComparison.OrdinalIgnoreCase) &&
-                            c.HostNames.Any(h => hostnames.Contains(h, StringComparison.OrdinalIgnoreCase)))
+            var thumbprints = await cert.Store.GetCertificateThumbprintsAsync(cancellationToken);
+            var oldThumbprints = thumbprints.Except(new[] { cert.Thumbprint }).ToArray();
+
+            // only try delete certificates that were issued by this client
+            // must match all hostnames and thumbprint to be considered for deletion
+            var certificatesToDelete = certificates
+                .Where(c => oldThumbprints.Contains(c.Thumbprint, StringComparison.OrdinalIgnoreCase) &&
+                            c.HostNames.All(h => hostnames.Any(h2 => h.Equals(h2, StringComparison.OrdinalIgnoreCase))))
                 .Select(c => c.Name)
                 .ToList();
 
