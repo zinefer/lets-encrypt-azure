@@ -11,37 +11,37 @@
         // full fallback system should work when all resources are named identical + MSI storage access
         {
             "hostNames": [
-                "letsencrypt-integration.marcstan.net"
+                "letsencrypt-inttest.marcstan.net"
             ],
             "targetResource": {
                 "type": "cdn",
-                "name": "letsencrypt-integration"
+                "name": "letsencrypt-inttest"
             }
         },
         // some resource names + MSI storage access
         {
             "hostNames": [
-                "letsencrypt-integration-02.marcstan.net"
+                "letsencrypt-inttest-02.marcstan.net"
             ],
             "certificateStore": {
                 "type": "keyVault",
                 "properties": {
-                    "name": "letsencrypt-integration"
+                    "name": "letsencrypt-inttest"
                 }
             },
             "targetResource": {
                 "type": "cdn",
                 "properties": {
-                    "name": "letsencrypt-integration-02",
-                    "resourceGroupName": "letsencrypt-integration"
+                    "name": "letsencrypt-inttest-02",
+                    "resourceGroupName": "letsencrypt-inttest"
                 }
             }
         },
         // everything specified explicitely + connection string in keyvault (MSI should be tried, fails and falls back to keyvault)
         {
             "hostNames": [
-                "letsencrypt-integration-03.marcstan.net",
-                "www.letsencrypt-integration-03.marcstan.net"
+                "letsencrypt-inttest-03.marcstan.net",
+                "www.letsencrypt-inttest-03.marcstan.net"
             ],
             "challengeResponder": {
                 "type": "storageAccount",
@@ -49,23 +49,23 @@
                     "containerName": "$web",
                     "path": ".well-known/acme-challenge/",
                     // used for connection string access (will look for secret "Storage" to contain storage account connectionstring)
-                    "keyVaultName": "letsencrypt-integration"
+                    "keyVaultName": "letsencrypt-inttest"
                 }
             },
             "certificateStore": {
                 "type": "keyVault",
                 "properties": {
-                    "name": "letsencrypt-integration",
-                    "certificateName": "letsencrypt-integration-03-marcstan-net"
+                    "name": "letsencrypt-inttest",
+                    "certificateName": "letsencrypt-inttest-03-marcstan-net"
                 }
             },
             "targetResource": {
                 "type": "cdn",
                 "properties": {
-                    "name": "letsencrypt-integration-03",
-                    "resourceGroupName": "letsencrypt-integration",
+                    "name": "letsencrypt-inttest-03",
+                    "resourceGroupName": "letsencrypt-inttest",
                     "endpoints": [
-                        "letsencrypt-integration-03"
+                        "letsencrypt-inttest-03"
                     ]
                 }
             }
@@ -73,7 +73,7 @@
         // assign certificate to a webapp (domain must already be assigned to the webapp)
         {
             "hostNames": [
-                "letsencrypt-integration.web.marcstan.net"
+                "letsencrypt-inttest.web.marcstan.net"
             ],
             // must use redirect to read content from storage account when path .well-known/acme-challenge/ is accessed
             // see "Supported resources.md" for examples
@@ -83,13 +83,13 @@
             },
             "certificateStore": {
                 "type": "keyVault",
-                "name": "letsencrypt-integration"
+                "name": "letsencrypt-inttest"
             },
             "targetResource": {
                 "type": "appService",
                 "properties": {
-                    "name": "letsencrypt-integration",
-                    "resourceGroupName": "letsencrypt-integration"
+                    "name": "letsencrypt-inttest",
+                    "resourceGroupName": "letsencrypt-inttest"
                 }
             }
         }

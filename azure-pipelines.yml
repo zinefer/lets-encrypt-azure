@@ -121,7 +121,7 @@ stages:
     variables:
     - group: 'Deployment Credentials'
     - name: ResourceGroupName
-      value: 'letsencrypt-integration'
+      value: 'letsencrypt-inttest'
 
     steps:
     - task: DownloadPipelineArtifact@1
