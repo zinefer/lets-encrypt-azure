@@ -29,6 +29,7 @@ namespace LetsEncrypt.Logic.Config
         private readonly IStorageFactory _storageFactory;
         private readonly IAzureAppServiceClient _azureAppServiceClient;
         private readonly IAzureCdnClient _azureCdnClient;
+        private readonly ILoggerFactory _loggerFactory;
 
         public RenewalOptionParser(
             IAzureHelper azureHelper,
@@ -36,14 +37,15 @@ namespace LetsEncrypt.Logic.Config
             IStorageFactory storageFactory,
             IAzureAppServiceClient azureAppServiceClient,
             IAzureCdnClient azureCdnClient,
-            ILogger logger)
+            ILoggerFactory loggerFactory)
         {
             _azureHelper = azureHelper ?? throw new ArgumentNullException(nameof(azureHelper));
             _keyVaultClient = keyVaultClient ?? throw new ArgumentNullException(nameof(keyVaultClient));
             _storageFactory = storageFactory ?? throw new ArgumentNullException(nameof(storageFactory));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _azureAppServiceClient = azureAppServiceClient;
             _azureCdnClient = azureCdnClient;
+            _loggerFactory = loggerFactory;
+            _logger = loggerFactory.CreateLogger<RenewalOptionParser>();
         }
 
         public async Task<IChallengeResponder> ParseChallengeResponderAsync(CertificateRenewalOptions cfg, CancellationToken cancellationToken)
@@ -167,7 +169,7 @@ namespace LetsEncrypt.Logic.Config
                         if (endpoints.IsNullOrEmpty())
                             endpoints = new[] { props.Name };
 
-                        return new CdnTargetResoure(_azureCdnClient, rg, props.Name, endpoints, _logger);
+                        return new CdnTargetResoure(_azureCdnClient, rg, props.Name, endpoints, _loggerFactory.CreateLogger<CdnTargetResoure>());
                     }
                 case "appservice":
                     {
@@ -185,7 +187,8 @@ namespace LetsEncrypt.Logic.Config
                         var rg = props.ResourceGroupName;
                         if (string.IsNullOrEmpty(rg))
                             rg = props.Name;
-                        return new AppServiceTargetResoure(_azureAppServiceClient, rg, props.Name, _logger);
+
+                        return new AppServiceTargetResoure(_azureAppServiceClient, rg, props.Name, _loggerFactory.CreateLogger<AppServiceTargetResoure>());
                     }
                 default:
                     throw new NotImplementedException(cfg.TargetResource.Type);

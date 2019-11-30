@@ -1,19 +1,12 @@
 using LetsEncrypt.Logic;
-using LetsEncrypt.Logic.Acme;
-using LetsEncrypt.Logic.Authentication;
-using LetsEncrypt.Logic.Azure;
 using LetsEncrypt.Logic.Config;
-using LetsEncrypt.Logic.Storage;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.KeyVault;
-using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
@@ -22,19 +15,28 @@ using ExecutionContext = Microsoft.Azure.WebJobs.ExecutionContext;
 
 namespace LetsEncrypt.Func
 {
-    public static class AutoRenewal
+    public class AutoRenewal
     {
+        private readonly IRenewalService _renewalService;
+        private readonly ILogger _logger;
+        private readonly IConfigurationLoader _configurationLoader;
+
+        public AutoRenewal(
+            IConfigurationLoader configurationLoader,
+            IRenewalService renewalService,
+            ILogger<AutoRenewal> logger)
+        {
+            _configurationLoader = configurationLoader;
+            _renewalService = renewalService;
+            _logger = logger;
+        }
+
         /// <summary>
         /// Wrapper function that allows manual execution via http with optional override parameters.
         /// </summary>
-        /// <param name="req"></param>
-        /// <param name="log"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         [FunctionName("execute")]
-        public static async Task<IActionResult> ExecuteManuallyAsync(
+        public async Task<IActionResult> ExecuteManuallyAsync(
             [HttpTrigger(AuthorizationLevel.Function, "POST", Route = "")] HttpRequestMessage req,
-            ILogger log,
             CancellationToken cancellationToken,
             ExecutionContext executionContext)
         {
@@ -46,7 +48,7 @@ namespace LetsEncrypt.Func
             };
             try
             {
-                await RenewAsync(overrides, log, cancellationToken, executionContext);
+                await RenewAsync(overrides, executionContext, cancellationToken);
                 return new AcceptedResult();
             }
             catch (Exception)
@@ -62,39 +64,19 @@ namespace LetsEncrypt.Func
         /// Time triggered function that reads config files from storage
         /// and renews certificates accordingly if needed.
         /// </summary>
-        /// <param name="timer"></param>
-        /// <param name="log"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         [FunctionName("renew")]
-        public static Task RenewAsync(
-          [TimerTrigger(Schedule.Daily)] TimerInfo timer,
-          ILogger log,
-          CancellationToken cancellationToken,
-          ExecutionContext executionContext)
-            => RenewAsync((Overrides)null, log, cancellationToken, executionContext);
+        public Task RenewAsync(
+            [TimerTrigger(Schedule.Daily, RunOnStartup = true)] TimerInfo timer,
+            CancellationToken cancellationToken,
+            ExecutionContext executionContext)
+            => RenewAsync((Overrides)null, executionContext, cancellationToken);
 
-        private static async Task RenewAsync(Overrides overrides, ILogger log, CancellationToken cancellationToken,
-          ExecutionContext executionContext)
+        private async Task RenewAsync(
+            Overrides overrides,
+            ExecutionContext executionContext,
+            CancellationToken cancellationToken)
         {
-            // internal storage (used for letsencrypt account metadata)
-            IStorageProvider storageProvider = new AzureBlobStorageProvider(Environment.GetEnvironmentVariable("AzureWebJobsStorage"), "letsencrypt");
-
-            IConfigurationProcessor processor = new ConfigurationProcessor();
-            var configurations = await LoadConfigFilesAsync(storageProvider, processor, log, cancellationToken, executionContext);
-            IAuthenticationService authenticationService = new AuthenticationService(storageProvider);
-            var az = new AzureHelper();
-
-            var tokenProvider = new AzureServiceTokenProvider();
-            var keyVaultClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback));
-            var storageFactory = new StorageFactory(az);
-            var appServiceClient = new AzureAppServiceClient(az, log);
-            var cdnClient = new AzureCdnClient(az);
-
-            var renewalOptionsParser = new RenewalOptionParser(az, keyVaultClient, storageFactory, appServiceClient, cdnClient, log);
-            var certificateBuilder = new CertificateBuilder();
-
-            IRenewalService renewalService = new RenewalService(authenticationService, renewalOptionsParser, certificateBuilder, log);
+            var configurations = await _configurationLoader.LoadConfigFilesAsync(executionContext, cancellationToken);
             var stopwatch = new Stopwatch();
             // TODO: with lots of certificate renewals this could run into function timeout (10mins)
             // with 30 days to expiry (default setting) this isn't a big problem as next day all finished certs are skipped
@@ -102,7 +84,7 @@ namespace LetsEncrypt.Func
             var errors = new List<Exception>();
             foreach ((var name, var config) in configurations)
             {
-                using (log.BeginScope($"Working on certificates from {name}"))
+                using (_logger.BeginScope($"Working on certificates from {name}"))
                 {
                     foreach (var cert in config.Certificates)
                     {
@@ -111,14 +93,14 @@ namespace LetsEncrypt.Func
                         cert.Overrides = overrides ?? Overrides.None;
                         try
                         {
-                            var result = await renewalService.RenewCertificateAsync(config.Acme, cert, cancellationToken);
+                            var result = await _renewalService.RenewCertificateAsync(config.Acme, cert, cancellationToken);
                             switch (result)
                             {
                                 case RenewalResult.NoChange:
-                                    log.LogInformation($"Certificate renewal skipped for: {hostNames} (no change required yet)");
+                                    _logger.LogInformation($"Certificate renewal skipped for: {hostNames} (no change required yet)");
                                     break;
                                 case RenewalResult.Success:
-                                    log.LogInformation($"Certificate renewal succeeded for: {hostNames}");
+                                    _logger.LogInformation($"Certificate renewal succeeded for: {hostNames}");
                                     break;
                                 default:
                                     throw new ArgumentOutOfRangeException(result.ToString());
@@ -126,54 +108,19 @@ namespace LetsEncrypt.Func
                         }
                         catch (Exception e)
                         {
-                            log.LogError(e, $"Certificate renewal failed for: {hostNames}!");
+                            _logger.LogError(e, $"Certificate renewal failed for: {hostNames}!");
                             errors.Add(e);
                         }
-                        log.LogInformation($"Renewing certificates for {hostNames} took: {stopwatch.Elapsed}");
+                        _logger.LogInformation($"Renewing certificates for {hostNames} took: {stopwatch.Elapsed}");
                     }
                 }
             }
             if (!configurations.Any())
             {
-                log.LogWarning("No configurations where processed, refere to the sample on how to set up configs!");
+                _logger.LogWarning("No configurations where processed, refere to the sample on how to set up configs!");
             }
             if (errors.Any())
                 throw new AggregateException("Failed to process all certificates", errors);
-        }
-
-        internal static async Task<IEnumerable<(string configName, Configuration)>> LoadConfigFilesAsync(
-            IStorageProvider storageProvider,
-            IConfigurationProcessor processor,
-            ILogger log,
-            CancellationToken cancellationToken,
-            ExecutionContext executionContext)
-
-        {
-            var configs = new List<(string, Configuration)>();
-            var paths = await storageProvider.ListAsync("config/", cancellationToken);
-            foreach (var path in paths)
-            {
-                if ("config/sample.json".Equals(path, StringComparison.OrdinalIgnoreCase))
-                    continue; // ignore
-
-                var content = await storageProvider.GetAsync(path, cancellationToken);
-                try
-                {
-                    configs.Add((path, processor.ValidateAndLoad(content)));
-                }
-                catch (Exception e)
-                {
-                    log.LogError(e, "Failed to process configuration file " + path);
-                }
-            }
-            if (!paths.Any())
-            {
-                log.LogWarning("No config files found. Placing config/sample.json in storage!");
-                string sampleJsonPath = Path.Combine(executionContext.FunctionAppDirectory, "sample.json");
-                var content = await File.ReadAllTextAsync(sampleJsonPath, cancellationToken);
-                await storageProvider.SetAsync("config/sample.json", content, cancellationToken);
-            }
-            return configs.ToArray();
         }
     }
 }

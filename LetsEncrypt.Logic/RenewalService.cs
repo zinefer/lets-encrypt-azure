@@ -15,7 +15,7 @@ namespace LetsEncrypt.Logic
 {
     public class RenewalService : IRenewalService
     {
-        private readonly ILogger _log;
+        private readonly ILogger _logger;
         private readonly IAuthenticationService _authenticationService;
         private readonly IRenewalOptionParser _renewalOptionParser;
         private readonly ICertificateBuilder _certificateBuilder;
@@ -24,12 +24,12 @@ namespace LetsEncrypt.Logic
             IAuthenticationService authenticationService,
             IRenewalOptionParser renewalOptionParser,
             ICertificateBuilder certificateBuilder,
-            ILogger log)
+            ILogger<RenewalService> logger)
         {
             _authenticationService = authenticationService ?? throw new ArgumentNullException(nameof(authenticationService));
             _renewalOptionParser = renewalOptionParser ?? throw new ArgumentNullException(nameof(renewalOptionParser));
             _certificateBuilder = certificateBuilder ?? throw new ArgumentNullException(nameof(certificateBuilder));
-            _log = log ?? throw new ArgumentNullException(nameof(log));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public async Task<RenewalResult> RenewCertificateAsync(
@@ -43,7 +43,7 @@ namespace LetsEncrypt.Logic
                 throw new ArgumentNullException(nameof(cfg));
 
             var hostNames = string.Join(";", cfg.HostNames);
-            _log.LogInformation($"Working on certificate for: {hostNames}");
+            _logger.LogInformation($"Working on certificate for: {hostNames}");
 
             // 1. skip if not outdated yet
             var cert = await GetExistingCertificateAsync(options, cfg, cancellationToken);
@@ -54,12 +54,12 @@ namespace LetsEncrypt.Logic
                 if (!cfg.Overrides.UpdateResource)
                     return RenewalResult.NoChange;
 
-                _log.LogWarning($"Override '{nameof(cfg.Overrides.UpdateResource)}' is enabled. Forcing resource update.");
+                _logger.LogWarning($"Override '{nameof(cfg.Overrides.UpdateResource)}' is enabled. Forcing resource update.");
             }
             else
             {
                 // 2. run Let's Encrypt challenge as cert either doesn't exist or is expired
-                _log.LogInformation($"Issuing a new certificate for {hostNames}");
+                _logger.LogInformation($"Issuing a new certificate for {hostNames}");
                 var order = await ValidateOrderAsync(options, cfg, cancellationToken);
 
                 // 3. save certificate
@@ -68,7 +68,7 @@ namespace LetsEncrypt.Logic
 
             // 4. update Azure resource
             var resource = _renewalOptionParser.ParseTargetResource(cfg);
-            _log.LogInformation($"Updating {resource.Name} ({resource.Type}) with certificates for {hostNames}");
+            _logger.LogInformation($"Updating {resource.Name} ({resource.Type}) with certificates for {hostNames}");
             await resource.UpdateAsync(cert, cancellationToken);
 
             return RenewalResult.Success;
@@ -89,7 +89,7 @@ namespace LetsEncrypt.Logic
             if (cfg.Overrides.NewCertificate)
             {
                 // ignore existing certificate
-                _log.LogWarning($"Override '{nameof(cfg.Overrides.NewCertificate)}' is enabled, forcing certificate renewal.");
+                _logger.LogWarning($"Override '{nameof(cfg.Overrides.NewCertificate)}' is enabled, forcing certificate renewal.");
                 return null;
             }
 
@@ -112,7 +112,7 @@ namespace LetsEncrypt.Logic
                 var isStillValid = existingCert.Expires.Value.Date.AddDays(-options.RenewXDaysBeforeExpiry) >= now;
                 if (isValidAlready && isStillValid)
                 {
-                    _log.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is still valid until {existingCert.Expires.Value}. " +
+                    _logger.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is still valid until {existingCert.Expires.Value}. " +
                         $"Will be renewed in {(int)(existingCert.Expires.Value - now).TotalDays - options.RenewXDaysBeforeExpiry} days. Skipping renewal.");
                     return existingCert;
                 }
@@ -120,7 +120,7 @@ namespace LetsEncrypt.Logic
                     $"certificate won't be valid until {existingCert.NotBefore}" :
                     $"renewal is demanded {options.RenewXDaysBeforeExpiry} days before expiry and it is currently {(int)(existingCert.Expires.Value - now).TotalDays} days before expiry";
 
-                _log.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is no longer up to date ({reason}).");
+                _logger.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is no longer up to date ({reason}).");
             }
             // either no cert or expired
             return null;
@@ -212,7 +212,7 @@ namespace LetsEncrypt.Logic
             CancellationToken cancellationToken)
         {
             var store = _renewalOptionParser.ParseCertificateStore(cfg);
-            _log.LogInformation($"Storing certificate in {store.Type} {store.Name}");
+            _logger.LogInformation($"Storing certificate in {store.Type} {store.Name}");
 
             // request certificate
             (byte[] pfxBytes, string password) = await _certificateBuilder.BuildCertificateAsync(order, cfg, cancellationToken);

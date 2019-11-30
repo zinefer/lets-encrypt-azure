@@ -1,11 +1,3 @@
-using LetsEncrypt.Logic;
-using LetsEncrypt.Logic.Acme;
-using LetsEncrypt.Logic.Authentication;
-using LetsEncrypt.Logic.Azure;
-using LetsEncrypt.Logic.Config;
-using LetsEncrypt.Logic.Storage;
-using Microsoft.Azure.KeyVault;
-using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using System;
@@ -21,8 +13,19 @@ using ExecutionContext = Microsoft.Azure.WebJobs.ExecutionContext;
 
 namespace LetsEncrypt.Func
 {
-    public static class IntegrationTests
+    public class IntegrationTests
     {
+        private readonly IConfigurationLoader _configurationLoader;
+        private readonly ILogger _logger;
+
+        public IntegrationTests(
+            IConfigurationLoader configurationLoader,
+            ILogger<IntegrationTests> logger)
+        {
+            _configurationLoader = configurationLoader;
+            _logger = logger;
+        }
+
         /// <summary>
         /// Time triggered function that checks every domain for a valid https certificate and logs exceptions if not.
         /// </summary>
@@ -31,39 +34,22 @@ namespace LetsEncrypt.Func
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [FunctionName("integration-test")]
-        public static Task RenewAsync(
+        public Task RenewAsync(
           [TimerTrigger(Schedule.TwiceDaily)] TimerInfo timer,
-          ILogger log,
-          CancellationToken cancellationToken,
-          ExecutionContext executionContext)
-            => CheckDomainsForValidCertificateAsync(log, cancellationToken, executionContext);
+          ExecutionContext executionContext,
+          CancellationToken cancellationToken)
+            => CheckDomainsForValidCertificateAsync(executionContext, cancellationToken);
 
-        private static async Task CheckDomainsForValidCertificateAsync(ILogger log, CancellationToken cancellationToken,
-            ExecutionContext executionContext)
+        private async Task CheckDomainsForValidCertificateAsync(
+            ExecutionContext executionContext,
+            CancellationToken cancellationToken)
         {
-            // internal storage (used for letsencrypt account metadata)
-            IStorageProvider storageProvider = new AzureBlobStorageProvider(Environment.GetEnvironmentVariable("AzureWebJobsStorage"), "letsencrypt");
-
-            IConfigurationProcessor processor = new ConfigurationProcessor();
-            var configurations = await AutoRenewal.LoadConfigFilesAsync(storageProvider, processor, log, cancellationToken, executionContext);
-            IAuthenticationService authenticationService = new AuthenticationService(storageProvider);
-            var az = new AzureHelper();
-
-            var tokenProvider = new AzureServiceTokenProvider();
-            var keyVaultClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback));
-            var storageFactory = new StorageFactory(az);
-            var appServiceClient = new AzureAppServiceClient(az, log);
-            var cdnClient = new AzureCdnClient(az);
-
-            var renewalOptionsParser = new RenewalOptionParser(az, keyVaultClient, storageFactory, appServiceClient, cdnClient, log);
-            var certificateBuilder = new CertificateBuilder();
-
-            IRenewalService renewalService = new RenewalService(authenticationService, renewalOptionsParser, certificateBuilder, log);
+            var configurations = await _configurationLoader.LoadConfigFilesAsync(executionContext, cancellationToken);
             var errors = new List<Exception>();
             var httpClient = new HttpClient();
             foreach ((var name, var config) in configurations)
             {
-                using (log.BeginScope($"Checking certificates from {name}"))
+                using (_logger.BeginScope($"Checking certificates from {name}"))
                 {
                     foreach (var cert in config.Certificates)
                     {
@@ -77,17 +63,17 @@ namespace LetsEncrypt.Func
                         }
                         catch (Exception e)
                         {
-                            log.LogError(e, $"Certificate check failed for: {hostNames}!");
+                            _logger.LogError(e, $"Certificate check failed for: {hostNames}!");
                             errors.Add(e);
                             continue;
                         }
-                        log.LogInformation($"Certificate for {hostNames} looks valid");
+                        _logger.LogInformation($"Certificate for {hostNames} looks valid");
                     }
                 }
             }
             if (!configurations.Any())
             {
-                log.LogWarning("No configurations where processed, refere to the sample on how to set up configs!");
+                _logger.LogWarning("No configurations where processed, refere to the sample on how to set up configs!");
             }
             if (errors.Any())
                 throw new AggregateException("Failed to process all certificates", errors);

@@ -20,7 +20,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             IAzureAppServiceClient azureManagementClient,
             string resourceGroupName,
             string name,
-            ILogger logger)
+            ILogger<AppServiceTargetResoure> logger)
         {
             _azureManagementClient = azureManagementClient ?? throw new ArgumentNullException(nameof(azureManagementClient));
             _resourceGroupName = resourceGroupName ?? throw new ArgumentNullException(nameof(resourceGroupName));

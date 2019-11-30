@@ -35,7 +35,7 @@ namespace LetsEncrypt.Tests
             factory.Setup(x => x.FromMsiAsync("example", new StorageProperties().ContainerName, It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(storage.Object));
 
-            var log = new Mock<ILogger>();
+            var log = new Mock<ILoggerFactory>();
             IRenewalOptionParser parser = new RenewalOptionParser(
                 az.Object,
                 kv.Object,
@@ -73,7 +73,9 @@ namespace LetsEncrypt.Tests
             factory.Setup(x => x.FromMsiAsync("example", new StorageProperties().ContainerName, It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(storage.Object));
 
-            var log = new Mock<ILogger>();
+            var log = new Mock<ILoggerFactory>();
+            log.Setup(x => x.CreateLogger(It.IsAny<string>()))
+                .Returns(new Mock<ILogger>().Object);
             IRenewalOptionParser parser = new RenewalOptionParser(
                 az.Object,
                 kv.Object,
@@ -115,7 +117,9 @@ namespace LetsEncrypt.Tests
             factory.Setup(x => x.FromConnectionString(connectionString, new StorageProperties().ContainerName))
                 .Returns(storage.Object);
 
-            var log = new Mock<ILogger>();
+            var log = new Mock<ILoggerFactory>();
+            log.Setup(x => x.CreateLogger(It.IsAny<string>()))
+                .Returns(new Mock<ILogger>().Object);
             IRenewalOptionParser parser = new RenewalOptionParser(
                 az.Object,
                 kv.Object,
@@ -153,7 +157,9 @@ namespace LetsEncrypt.Tests
             factory.Setup(x => x.FromConnectionString(connectionString, new StorageProperties().ContainerName))
                 .Returns(storage.Object);
 
-            var log = new Mock<ILogger>();
+            var log = new Mock<ILoggerFactory>();
+            log.Setup(x => x.CreateLogger(It.IsAny<string>()))
+                .Returns(new Mock<ILogger>().Object);
             IRenewalOptionParser parser = new RenewalOptionParser(
                 az.Object,
                 kv.Object,
@@ -177,7 +183,7 @@ namespace LetsEncrypt.Tests
             var kv = new Mock<IKeyVaultClient>();
             var factory = new Mock<IStorageFactory>();
 
-            var log = new Mock<ILogger>();
+            var log = new Mock<ILoggerFactory>();
             IRenewalOptionParser parser = new RenewalOptionParser(
                 az.Object,
                 kv.Object,
@@ -199,7 +205,7 @@ namespace LetsEncrypt.Tests
             var kv = new Mock<IKeyVaultClient>();
             var factory = new Mock<IStorageFactory>();
 
-            var log = new Mock<ILogger>();
+            var log = new Mock<ILoggerFactory>();
             IRenewalOptionParser parser = new RenewalOptionParser(
                 az.Object,
                 kv.Object,

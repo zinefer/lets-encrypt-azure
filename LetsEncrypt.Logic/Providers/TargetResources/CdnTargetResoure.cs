@@ -21,7 +21,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             string resourceGroupName,
             string name,
             string[] endpoints,
-            ILogger logger)
+            ILogger<CdnTargetResoure> logger)
         {
             _azureCdnClient = azureCdnClient;
             _resourceGroupName = resourceGroupName ?? throw new ArgumentNullException(nameof(resourceGroupName));

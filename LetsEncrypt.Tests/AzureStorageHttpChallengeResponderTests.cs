@@ -43,7 +43,7 @@ namespace LetsEncrypt.Tests
                 factory.Object,
                 new Mock<IAzureAppServiceClient>().Object,
                 new Mock<IAzureCdnClient>().Object,
-                new Mock<ILogger>().Object);
+                new Mock<ILoggerFactory>().Object);
             var responder = await parser.ParseChallengeResponderAsync(cert, CancellationToken.None);
 
             var ctx = new Mock<IChallengeContext>();
