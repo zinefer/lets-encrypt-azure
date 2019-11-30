@@ -50,7 +50,9 @@ namespace LetsEncrypt.Logic
 
             if (cert != null)
             {
-                // can usually skip rest, except if override is used
+                // skipping by default causes the resource to not be updated in case of an initial error
+                // as reported by https://github.com/MarcStan/lets-encrypt-azure/issues/6
+                // TODO: must check target resource first (is latest cert in use) and only then we can safely skip
                 if (!cfg.Overrides.UpdateResource)
                     return RenewalResult.NoChange;
 
