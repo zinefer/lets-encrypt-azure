@@ -2,6 +2,8 @@
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -50,6 +52,20 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
 
                 throw;
             }
+        }
+
+        public async Task<string[]> GetCertificateThumbprintsAsync(CancellationToken cancellationToken)
+        {
+            var thumbprints = new List<string>();
+            var response = await _keyVaultClient.GetCertificateVersionsAsync($"https://{Name}.vault.azure.net", _certificateName, null, cancellationToken);
+            thumbprints.AddRange(response.Select(x => ThumbprintHelper.Convert(x.X509Thumbprint)));
+
+            while (!string.IsNullOrEmpty(response.NextPageLink))
+            {
+                response = await _keyVaultClient.GetCertificateVersionsNextAsync(response.NextPageLink, cancellationToken);
+                thumbprints.AddRange(response.Select(x => ThumbprintHelper.Convert(x.X509Thumbprint)));
+            }
+            return thumbprints.ToArray();
         }
 
         public async Task<ICertificate> UploadAsync(byte[] pfxBytes, string password, string[] hostNames, CancellationToken cancellationToken)

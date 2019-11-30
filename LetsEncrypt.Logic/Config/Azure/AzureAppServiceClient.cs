@@ -24,12 +24,11 @@ namespace LetsEncrypt.Logic.Azure
     public class AzureAppServiceClient : IAzureAppServiceClient
     {
         private readonly IAzureHelper _azureHelper;
-        private HttpClient _httpClient;
         private readonly ILogger _logger;
 
         public AzureAppServiceClient(
             IAzureHelper azureHelper,
-            ILogger logger)
+            ILogger<AzureAppServiceClient> logger)
         {
             _azureHelper = azureHelper;
             _logger = logger;
