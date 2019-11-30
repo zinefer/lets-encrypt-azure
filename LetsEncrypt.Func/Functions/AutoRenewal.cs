@@ -1,3 +1,4 @@
+using LetsEncrypt.Func.Config;
 using LetsEncrypt.Logic;
 using LetsEncrypt.Logic.Config;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ExecutionContext = Microsoft.Azure.WebJobs.ExecutionContext;
 
-namespace LetsEncrypt.Func
+namespace LetsEncrypt.Func.Functions
 {
     public class AutoRenewal
     {
@@ -66,7 +67,7 @@ namespace LetsEncrypt.Func
         /// </summary>
         [FunctionName("renew")]
         public Task RenewAsync(
-            [TimerTrigger(Schedule.Daily, RunOnStartup = true)] TimerInfo timer,
+            [TimerTrigger(Schedule.Daily)] TimerInfo timer,
             CancellationToken cancellationToken,
             ExecutionContext executionContext)
             => RenewAsync((Overrides)null, executionContext, cancellationToken);

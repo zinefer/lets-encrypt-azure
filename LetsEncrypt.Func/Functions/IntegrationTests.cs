@@ -1,3 +1,4 @@
+using LetsEncrypt.Func.Config;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using System;
@@ -11,7 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ExecutionContext = Microsoft.Azure.WebJobs.ExecutionContext;
 
-namespace LetsEncrypt.Func
+namespace LetsEncrypt.Func.Functions
 {
     public class IntegrationTests
     {

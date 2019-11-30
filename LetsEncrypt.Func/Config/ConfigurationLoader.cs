@@ -8,7 +8,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LetsEncrypt.Func
+namespace LetsEncrypt.Func.Config
 {
     public class ConfigurationLoader : IConfigurationLoader
     {
