@@ -50,11 +50,6 @@ namespace LetsEncrypt.Logic.Azure
                 properties = new
                 {
                     serverFarmId = "",
-                    enabledHostNames = new[]
-                    {
-                        // contains scm, azurewebsites and custom hostnames all in one
-                        ""
-                    },
                     hostNameSslStates = new[]
                     {
                         new
@@ -70,8 +65,6 @@ namespace LetsEncrypt.Logic.Azure
             return new AppServiceResponse
             {
                 CustomDomains = appServiceResponse.properties.hostNameSslStates
-                    // filter to SNI as that's the only type of cert this project can currently issue
-                    .Where(x => "SniEnabled".Equals(x.sslState, StringComparison.OrdinalIgnoreCase))
                     .Select(x => new AppServiceCustomDomain
                     {
                         HostName = x.name,

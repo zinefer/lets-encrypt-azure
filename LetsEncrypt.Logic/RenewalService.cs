@@ -76,8 +76,8 @@ namespace LetsEncrypt.Logic
                 await resource.IsUsingCertificateAsync(cert, cancellationToken)))
             {
                 _logger.LogWarning(resource.SupportsCertificateCheck ?
-                    $"Cannot check resource {resource.Name} ({resource.Type}). Assuming it is already using latest certificate. Skipping resource update!" :
-                    $"Resource {resource.Name} ({resource.Type}) is already using latest certificate. Skipping resource update!");
+                    $"Resource {resource.Name} ({resource.Type}) is already using latest certificate. Skipping resource update!" :
+                    $"Cannot check resource {resource.Name} ({resource.Type}). Assuming it is already using latest certificate. Skipping resource update!");
 
                 return RenewalResult.NoChange;
             }

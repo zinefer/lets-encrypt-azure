@@ -32,17 +32,19 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
 
         public string Type => "App Service";
 
-        public bool SupportsCertificateCheck => false;
+        public bool SupportsCertificateCheck => true;
 
         public async Task<bool> IsUsingCertificateAsync(ICertificate cert, CancellationToken cancellationToken)
         {
             var response = await _azureManagementClient.GetAppServicePropertiesAsync(_resourceGroupName, Name, cancellationToken);
             // app service has one entry per domain, but we could have one cert that matched all
             var matched = response.CustomDomains
-                .Where(x => x.Thumbprint.Equals(cert.Thumbprint, StringComparison.OrdinalIgnoreCase))
+                .Where(x => cert.Thumbprint.Equals(x.Thumbprint, StringComparison.OrdinalIgnoreCase))
                 .ToArray();
             // verify that the cert covers all matching entries
-            return matched.All(x => cert.HostNames.Contains(x.HostName, StringComparison.OrdinalIgnoreCase));
+            return
+                matched.Length > 0 &&
+                matched.All(x => cert.HostNames.Contains(x.HostName, StringComparison.OrdinalIgnoreCase));
         }
 
         public async Task UpdateAsync(ICertificate cert, CancellationToken cancellationToken)
@@ -74,13 +76,20 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             var appServiceResourceGroupName = ParseResourceGroupFromResourceId(response.ServerFarmId);
 
             _logger.LogInformation($"Adding certificate {cert.Name} (thumprint: {cert.Thumbprint}, matchedHostNames: {formattedHostNames}) to resourcegroup {appServiceResourceGroupName} with name {certName}");
-            // upload certificate into app service plan resource group
-            await _azureManagementClient.UploadCertificateAsync(response, cert, certName, appServiceResourceGroupName, cancellationToken);
+
+            var certificates = await _azureManagementClient.ListCertificatesAsync(appServiceResourceGroupName, cancellationToken);
+            var alreadyUploaded = certificates.Any(c => c.Name == certName);
+            if (!alreadyUploaded)
+            {
+                // only upload certificate into app service plan resource group
+                // if not already found (allow for idempotence)
+                await _azureManagementClient.UploadCertificateAsync(response, cert, certName, appServiceResourceGroupName, cancellationToken);
+            }
 
             _logger.LogInformation($"Binding hostnames {formattedHostNames} on webapp {Name}");
             await _azureManagementClient.AssignDomainBindingsAsync(_resourceGroupName, Name, hostnames, cert, response.Location, cancellationToken);
 
-            // remove all old certificates from resource groupas they are no longer needed
+            // remove all old certificates from resource groups they are no longer needed
             await CleanupOldCertificatesAsync(hostnames, cert, appServiceResourceGroupName, cancellationToken);
         }
 
