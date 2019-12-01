@@ -11,5 +11,7 @@ namespace LetsEncrypt.Logic.Azure
         Task<CdnResponse[]> ListEndpointsAsync(string resourceGroupName, string name, CancellationToken cancellationToken);
 
         Task<HttpResponseMessage[]> UpdateEndpointsAsync(string resourceGroupName, string name, CdnResponse[] endpoints, ICertificate cert, CancellationToken cancellationToken);
+
+        Task<CdnCustomDomainResponse[]> GetCustomDomainDetailsAsync(string resourceGroupName, string name, CdnResponse endpoint, CancellationToken cancellationToken);
     }
 }

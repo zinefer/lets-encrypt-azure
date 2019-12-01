@@ -85,6 +85,35 @@ namespace LetsEncrypt.Logic.Azure
                 .ToArray();
         }
 
+        public async Task<CdnCustomDomainResponse[]> GetCustomDomainDetailsAsync(string resourceGroupName, string name, CdnResponse endpoint, CancellationToken cancellationToken)
+        {
+            var httpClient = await _azureHelper.GetAuthenticatedARMClientAsync(cancellationToken);
+            // use REST api, management SDK doesn't have new endpoints yet (fluent SDK not at all, regular mgmt SDK only in preview release)
+            var results = await Task.WhenAll(endpoint.CustomDomains.Select(async domain =>
+                {
+                    // https://github.com/Azure/azure-rest-api-specs/blob/master/specification/cdn/resource-manager/Microsoft.Cdn/stable/2019-04-15/examples/CustomDomains_EnableCustomHttpsUsingBYOC.json
+                    // as per https://stackoverflow.com/a/56147987
+                    var url = "https://management.azure.com" +
+                        $"/subscriptions/{_azureHelper.GetSubscriptionId()}/" +
+                        $"resourceGroups/{resourceGroupName}/" +
+                        $"providers/Microsoft.Cdn/profiles/{name}/" +
+                        $"endpoints/{endpoint.Name}/customDomains/" +
+                        $"{domain.Name}?api-version=2019-04-15";
+
+                    var response = await httpClient.GetAsync(url, cancellationToken);
+                    response.EnsureSuccessStatusCode();
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    var cdnResponse = JsonConvert.DeserializeAnonymousType(responseContent, new
+                    {
+                        name = "",
+                        properties = new CdnCustomDomainResponse()
+                    });
+                    return cdnResponse;
+                }));
+
+            return results.Select(x => x.properties).ToArray();
+        }
+
         public async Task<HttpResponseMessage[]> UpdateEndpointsAsync(string resourceGroupName, string name, CdnResponse[] endpoints, ICertificate cert, CancellationToken cancellationToken)
         {
             var httpClient = await _azureHelper.GetAuthenticatedARMClientAsync(cancellationToken);
@@ -95,13 +124,13 @@ namespace LetsEncrypt.Logic.Azure
                 .SelectMany(e => e.CustomDomains, (endpoint, domain) =>
                 {
                     // https://github.com/Azure/azure-rest-api-specs/blob/master/specification/cdn/resource-manager/Microsoft.Cdn/stable/2019-04-15/examples/CustomDomains_EnableCustomHttpsUsingBYOC.json
-                    // switched to older API as per https://stackoverflow.com/a/56147987 since 2019-04-15 sometimes just removes the certificate without updating it..
+                    // as per https://stackoverflow.com/a/56147987
                     var url = "https://management.azure.com" +
                         $"/subscriptions/{_azureHelper.GetSubscriptionId()}/" +
                         $"resourceGroups/{resourceGroupName}/" +
                         $"providers/Microsoft.Cdn/profiles/{name}/" +
                         $"endpoints/{endpoint.Name}/customDomains/" +
-                        $"{domain.Name}/enableCustomHttps?api-version=2018-04-02";
+                        $"{domain.Name}/enableCustomHttps?api-version=2019-04-15";
 
                     var settings = new JsonSerializerSettings
                     {
@@ -120,7 +149,7 @@ namespace LetsEncrypt.Logic.Azure
                         }
                     }, settings);
                     var content = new StringContent(json, Encoding.ASCII, "application/json");
-                    return httpClient.PostAsync(url, content);
+                    return httpClient.PostAsync(url, content, cancellationToken);
                 }));
 
             return results;

@@ -17,5 +17,7 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
         ICertificateStore Store { get; }
 
         string Thumbprint { get; }
+
+        string CertificateVersion { get; }
     }
 }

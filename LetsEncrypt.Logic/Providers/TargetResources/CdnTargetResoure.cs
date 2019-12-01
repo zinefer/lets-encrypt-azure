@@ -1,8 +1,10 @@
 ﻿using LetsEncrypt.Logic.Azure;
+using LetsEncrypt.Logic.Azure.Response;
 using LetsEncrypt.Logic.Extensions;
 using LetsEncrypt.Logic.Providers.CertificateStores;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,13 +36,64 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
 
         public string Type => "CDN";
 
-        public bool SupportsCertificateCheck => false;
+        public bool SupportsCertificateCheck => true;
 
-        public Task<bool> IsUsingCertificateAsync(ICertificate cert, CancellationToken cancellationToken)
+        public async Task<bool> IsUsingCertificateAsync(ICertificate cert, CancellationToken cancellationToken)
         {
             // API does not return information about currently rolled out cert
-            // additionally POP rollout takes ~6h and during that timeframe the old cert needs to be active
-            throw new NotSupportedException("CDN does not support getting currently rolled out certificate!");
+            var endpoints = await MatchEndpointsAsync(cert, cancellationToken);
+            var inProgress = new Dictionary<CdnResponse, List<CdnCustomDomainResponse>>();
+            foreach (var endpoint in endpoints)
+            {
+                // if any cert deployment is in process then assume it's for the correct cert
+                // since cert deployment takes 6h anyway there's nothing to do but wait
+                // => worst case we do one endpoint per day (if only one deployment succeeds and the rest fail)
+                var customDomainDetails = await _azureCdnClient.GetCustomDomainDetailsAsync(_resourceGroupName, Name, endpoint, cancellationToken);
+                // filter to only relevant domains, we don't care about other deployments in progress as they don't affect us (for this particular cert anyway)
+                var deploymentsInProgress = customDomainDetails
+                    .Where(x => cert.HostNames.Contains(x.HostName, StringComparison.OrdinalIgnoreCase) &&
+                                x.CustomHttpsProvisioningState == CustomHttpsProvisioningState.Enabling)
+                    .ToList();
+                if (deploymentsInProgress.Any())
+                {
+                    if (!inProgress.ContainsKey(endpoint))
+                        inProgress.Add(endpoint, new List<CdnCustomDomainResponse>());
+                    inProgress[endpoint].AddRange(deploymentsInProgress);
+                }
+                else
+                {
+                    // if non are in progress check rolled out cert
+                    foreach (var details in customDomainDetails)
+                    {
+                        if (details.CustomHttpsProvisioningState != CustomHttpsProvisioningState.Enabled ||
+                            details.CustomHttpsProvisioningSubstate != CustomHttpsProvisioningSubstate.CertificateDeployed ||
+                            !IsCertificateFromSecretVersion(cert, details.CustomHttpsParameters.CertificateSourceParameters.SecretVersion))
+                        {
+                            _logger.LogWarning($"Wrong certificate is rolled out on (endpoint: {endpoint.Name}, domain: {details.HostName}). Expected thumbprint: {cert.Thumbprint}, found: {details.CustomHttpsParameters?.CertificateSourceParameters?.SecretVersion ?? "null"}. Provisioning status was: {details.CustomHttpsProvisioningState}, sub state: {details.CustomHttpsProvisioningSubstate}");
+                            return false;
+                        }
+                    }
+                }
+            }
+            if (inProgress.Any())
+            {
+                // must wait for cert deployment
+                // as in-progress deployments cannot be canceled and cause all further API calls to return with 400 BadRequest
+                _logger.LogWarning($"Certificate deployment on endpoint is still in progress! Cannot update certificate now -> retrying next time. Deployment in progress for endpoints: {Environment.NewLine}" +
+                    string.Join(Environment.NewLine, inProgress.Select(pair =>
+                    {
+                        var endpoint = pair.Key;
+                        var domains = pair.Value;
+                        return $" {endpoint.Name} (domains: {string.Join(", ", domains.Select(x => x.HostName))})";
+                    })));
+
+                // "half truth". we don't know yet which cert is being rolled out
+                // so assume it's the correct one
+                // once it's rolled out we can check the cert thumbprint (-> next run)
+            }
+
+            // correct cert is in use
+            return true;
         }
 
         public async Task UpdateAsync(ICertificate cert, CancellationToken cancellationToken)
@@ -55,12 +108,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
             _logger.LogInformation("Waiting 2 minutes before deploying certificate to CDN");
             await Task.Delay(TimeSpan.FromMinutes(2), cancellationToken);
 
-            var endpoints = await _azureCdnClient.ListEndpointsAsync(_resourceGroupName, Name, cancellationToken);
-            var matchingEndpoints = endpoints
-                .Where(endpoint => _endpoints.Contains(endpoint.Name, StringComparison.OrdinalIgnoreCase) &&
-                            endpoint.CustomDomains.Any(domain =>
-                                cert.HostNames.Contains(domain.HostName, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
+            var endpoints = await MatchEndpointsAsync(cert, cancellationToken);
 
             var results = await _azureCdnClient.UpdateEndpointsAsync(_resourceGroupName, Name, endpoints, cert, cancellationToken);
 
@@ -78,6 +126,24 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
                 //        break;
                 //}
             }
+        }
+
+        private async Task<CdnResponse[]> MatchEndpointsAsync(ICertificate cert, CancellationToken cancellationToken)
+        {
+            var endpoints = await _azureCdnClient.ListEndpointsAsync(_resourceGroupName, Name, cancellationToken);
+            var matchingEndpoints = endpoints
+                .Where(endpoint => _endpoints.Contains(endpoint.Name, StringComparison.OrdinalIgnoreCase) &&
+                            endpoint.CustomDomains.Any(domain =>
+                                cert.HostNames.Contains(domain.HostName, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            return matchingEndpoints.ToArray();
+        }
+
+        private bool IsCertificateFromSecretVersion(ICertificate cert, string secretVersion)
+        {
+            // no need to fetch from keyvault only to compare thumbprints. comparing secret version achieves the same guarantee
+            return cert.CertificateVersion.Equals(secretVersion, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

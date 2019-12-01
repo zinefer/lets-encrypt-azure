@@ -27,5 +27,7 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
         public string[] HostNames => _certificateBundle.Policy.X509CertificateProperties.SubjectAlternativeNames.DnsNames.ToArray();
 
         public string Thumbprint => ThumbprintHelper.Convert(_certificateBundle.X509Thumbprint);
+
+        public string CertificateVersion => _certificateBundle.CertificateIdentifier.Version;
     }
 }
