@@ -69,7 +69,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
                             details.CustomHttpsProvisioningSubstate != CustomHttpsProvisioningSubstate.CertificateDeployed ||
                             !IsCertificateFromSecretVersion(cert, details.CustomHttpsParameters.CertificateSourceParameters.SecretVersion))
                         {
-                            _logger.LogWarning($"Wrong certificate is rolled out on (endpoint: {endpoint.Name}, domain: {details.HostName}). Expected thumbprint: {cert.Thumbprint}, found: {details.CustomHttpsParameters?.CertificateSourceParameters?.SecretVersion ?? "null"}. Provisioning status was: {details.CustomHttpsProvisioningState}, sub state: {details.CustomHttpsProvisioningSubstate}");
+                            _logger.LogWarning($"Wrong certificate is rolled out on (endpoint: {endpoint.Name}, domain: {details.HostName}). Expected certificate version: {cert.CertificateVersion}, found: {details.CustomHttpsParameters?.CertificateSourceParameters?.SecretVersion ?? "null"}. Provisioning status was: {details.CustomHttpsProvisioningState}, sub state: {details.CustomHttpsProvisioningSubstate}");
                             return false;
                         }
                     }
