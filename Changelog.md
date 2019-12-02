@@ -2,8 +2,9 @@
 
 Versioning is done by tagging commits on master and is SemVer compliant.
 
-# vNext
+# 1.1.0
 
+* Suggest custom role for least privilege access control [#11](https://github.com/MarcStan/lets-encrypt-azure/issues/11)
 * Fixed logs being silenced [#9](https://github.com/MarcStan/lets-encrypt-azure/issues/9) & [#10](https://github.com/MarcStan/lets-encrypt-azure/issues/10)
 * Retry CDN certificates when none is in progress or certificate does not match [#8](https://github.com/MarcStan/lets-encrypt-azure/issues/8)
 * Switched to .Net Core 3.0 (and functions v3 runtime)
