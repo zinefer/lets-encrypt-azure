@@ -67,7 +67,7 @@ namespace LetsEncrypt.Func.Functions
         /// </summary>
         [FunctionName("renew")]
         public Task RenewAsync(
-            [TimerTrigger(Schedule.Daily)] TimerInfo timer,
+            [TimerTrigger(Schedule.Daily, RunOnStartup = true)] TimerInfo timer,
             CancellationToken cancellationToken,
             ExecutionContext executionContext)
             => RenewAsync((Overrides)null, executionContext, cancellationToken);
