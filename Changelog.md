@@ -2,6 +2,10 @@
 
 Versioning is done by tagging commits on master and is SemVer compliant.
 
+# 1.1.1
+
+* Upgrade to .Net Core 3.1
+
 # 1.1.0
 
 * Suggest custom role for least privilege access control [#11](https://github.com/MarcStan/lets-encrypt-azure/issues/11)
