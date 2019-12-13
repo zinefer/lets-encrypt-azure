@@ -12,9 +12,35 @@ Personally I use one keyvault per project to have a clean seperation betweem pro
 
 Please see the individual `targetResources` in [Supportes resources](./Supported%20resources.md#targetResource) for additional prerequisites based on whichever resources will consume the certificate.
 
-## Deploy
+## Setting up the deployment
 
-The [azure-pipelines.yml](./azure-pipelines.yml) contains the full infrastructure and code deployment, all you need to do is modify the variables (custom resourcegroup name) and run it.
+The [azure-pipelines.yml](./azure-pipelines.yml) contains the full infrastructure and code deployment (you can ignore the `integrationtests.yml` as I use those for verification during development).
+
+The pipeline can run on any Microsoft Hosted agent as all the software it needs is installed on those (Visual Studio, .Net Core, Az module, ..).
+
+Before running the pipeline you must modify it a bit:
+
+Get rid of this group definition:
+``` yaml
+- group: 'Deployment Credentials'
+```
+
+The resourcegroup name used in Azure is also used for storage account, app insights and the function app and must thus be globally unique, so pick something unique (with less than 23 characters to avoid hitting Azure limits):
+
+``` yaml
+- name: ResourceGroupName
+  value: 'letsencrypt-func'
+```
+
+The service connection which is used to deploy your code (see service connection tab in project settings for the exact name you have configured). This is defined multiple times in the yaml file as it cannot be templated:
+
+``` yaml
+azureSubscription: 'Opensource Deployments'
+```
+
+Optionally get rid of the `schedules` section at the top (I like my pipelines to run periodically so I know when something is broken).
+
+The modified pipeline should now execute successfully in your account.
 
 Alternatively you can execute the same steps manually from your machine using Az powershell module and Visual Studio.
 
@@ -24,7 +50,7 @@ Along with the function app a storage account is created and the keyvault(s) pre
 
 The storage account is used to store the metadata and configuration files for the renewal process (inside container `letsencrypt`).
 
-### First run
+## First run
 
 If the function was deployed successfully you can run it once manually (using the provided http function `execute` **Note** that it only accepts POST requests with an empty body).
 
@@ -42,7 +68,7 @@ See [Supported resources](./Supported%20resources.md) for more documentation inc
 
 If Azure CDN is setup correctly (with the endpoint and domain already correctly mapped) and the permissions are assigned correctly then the function should create certificates in the keyvault after a successful run and attach them to the CDN/update them when needed.
 
-**Note:** The CDN update can take up to 6 hours until the certificate is used and you can see the progress in the CDN -> Endpoints section (the function will not check for it once it has triggered the deploy successfully).
+**Note:** The CDN update can take up to 6 hours until the certificate is used and you can see the progress in the CDN -> Endpoints section in Azure (the function will not check for it once it has triggered the deploy successfully).
 
 ## Known issues
 
@@ -57,4 +83,4 @@ To manually invoke it, call the endpoint `<your-function>.azurewebsites.net/api/
 It currently requires no body but allows a few overrides via querystring:
 
 * `newCertificate` - if set to `true` will issue new Let's Encrypt certificates for all sites even if the existing certificates haven't expired (this will also update the azure resources with the new certificates)
-* `updateResource` - if set to `true` will update the azure resource with the existing certificate. This is useful if you already have a certificate in the keyvault and just want to update the azure resources to use it, without issuing a new certificate
+* `updateResource` - if set to `true` will update the azure resource with the existing certificate. This is useful if you already have a certificate in the keyvault and just want to update the azure resources to use it, without issuing a new certificate. Since v1.1.0 this is obsolete as the function is idempotent and will automatically update resources that are not yet using the latest certificate
