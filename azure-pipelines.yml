@@ -14,11 +14,11 @@ schedules:
     include:
     - master
 variables:
-  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
-  # if true deploys an integration test resourcegroup that can be used to test cert renewal on real domains
-  # configure & upload integrationtests.json to run periodic renewal and have int test function verify SSL certs
-  # use azure alerts on the function (exception count > 0) to verify
-  IntegrationTestsEnabled: false
+  - name: DOTNET_SKIP_FIRST_TIME_EXPERIENCE
+    value: true
+  - group: 'Deployment Credentials'
+  - name: ResourceGroupName
+    value: 'letsencrypt-func'
   
 stages:
 - stage: build
@@ -75,10 +75,6 @@ stages:
   - job: deploy
     pool:
       vmImage: 'windows-latest'
-    variables:
-    - group: 'Deployment Credentials'
-    - name: ResourceGroupName
-      value: 'letsencrypt-func'
 
     steps:
     - task: DownloadPipelineArtifact@1
@@ -107,26 +103,3 @@ stages:
         appName: '$(ResourceGroupName)'
         package: '$(System.ArtifactsDirectory)/LetsEncrypt.Func'
         deploymentMethod: runFromPackage
-
-  - job: integration
-    condition: and(succeeded(), eq(variables['IntegrationTestsEnabled'], 'true'))
-    pool:
-      vmImage: 'windows-latest'
-    variables:
-    - group: 'Deployment Credentials'
-    - name: ResourceGroupName
-      value: 'letsencrypt-inttest'
-
-    steps:
-    - task: DownloadPipelineArtifact@1
-      inputs:
-        artifactName: deploy
-        targetPath: '$(System.ArtifactsDirectory)'
-
-    - task: AzurePowerShell@4
-      displayName: 'Deploy'
-      inputs:
-        azureSubscription: 'Opensource Deployments'
-        ScriptPath: '$(System.ArtifactsDirectory)/Deploy.ps1'
-        ScriptArguments: '-ResourceGroupName $(ResourceGroupName) -File integration.json'
-        azurePowerShellVersion: LatestVersion
