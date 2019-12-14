@@ -17,7 +17,7 @@
         /// </summary>
         public string Path { get; set; } = ".well-known/acme-challenge/";
 
-        // TODO: all properties below are for auth and mutually exclusive. Perhaps a subtype auth with same type system as rest would be better, but then config gets one more nested layer..
+        // all properties below are for auth and mutually exclusive. Perhaps a subtype auth with same type system as rest would be better, but then config gets one more nested layer..
 
         /// <summary>
         /// Used for MSI authentication (preferred access method).

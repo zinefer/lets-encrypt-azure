@@ -79,8 +79,8 @@ namespace LetsEncrypt.Func.Functions
         {
             var configurations = await _configurationLoader.LoadConfigFilesAsync(executionContext, cancellationToken);
             var stopwatch = new Stopwatch();
-            // TODO: with lots of certificate renewals this could run into function timeout (10mins)
-            // with 30 days to expiry (default setting) this isn't a big problem as next day all finished certs are skipped
+            // with lots of certificate renewals this could run into function timeout (10mins)
+            // with 30 days to expiry (default setting) this isn't a big problem as next day all unfinished renewals are continued
             // user will only get email <= 14 days before expiry so acceptable for now
             var errors = new List<Exception>();
             foreach ((var name, var config) in configurations)
