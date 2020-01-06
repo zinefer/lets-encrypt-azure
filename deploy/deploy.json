@@ -77,7 +77,7 @@
             ],
             "properties": {
                 "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
-                "use32BitWorkerProcess": false,
+                "use32BitWorkerProcess": true,
                 "ftpsState": "Disabled",
                 "httpsOnly": true,
                 "siteConfig": {
