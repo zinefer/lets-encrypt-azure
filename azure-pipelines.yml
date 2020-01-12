@@ -18,7 +18,7 @@ variables:
     value: true
   - group: 'Deployment Credentials'
   - name: ResourceGroupName
-    value: 'letsencrypt-func'
+    value: 'lets-encrypt-azure-84f'
   
 stages:
 - stage: build
