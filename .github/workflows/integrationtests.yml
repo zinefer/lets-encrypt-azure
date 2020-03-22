@@ -1,0 +1,23 @@
+on:
+  push:
+    branches:
+      - master
+
+env:
+  ResourceGroup: letsencrypt-inttest
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Login via Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: Azure CLI ARM deployment
+      uses: azure/CLI@v1
+      working-directory: internal/deploy
+      with:
+        inlineScript: |
+          chmod +x deploy.sh
+          ./deploy.sh $ResourceGroup
