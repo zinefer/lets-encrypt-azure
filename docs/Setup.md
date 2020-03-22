@@ -1,7 +1,5 @@
 # Setup
 
-For a basic tutorial about deployments with YAML pipelines in Azure DevOps and azure function deployment see my [blog post](https://marcstan.net/blog/2019/12/07/Using-Azure-DevOps-to-deploy-Azure-functions-from-Github/).
-
 You must perform these steps to getting this solution up and running:
 
 ## Prerequisites
@@ -14,35 +12,28 @@ Please see the individual `targetResources` in [Supportes resources](./Supported
 
 ## Setting up the deployment
 
-The [azure-pipelines.yml](./azure-pipelines.yml) contains the full infrastructure and code deployment (you can ignore the `integrationtests.yml` as I use those for verification during development).
+To get started fork this repository (I recommend you do minimal changes to the repository to make it easier to [keep it in sync](https://stackoverflow.com/questions/20984802/how-can-i-keep-my-fork-in-sync-without-adding-a-separate-remote/21131381#21131381)).
 
-The pipeline can run on any Microsoft Hosted agent as all the software it needs is installed on those (Visual Studio, .Net Core, Az module, ..).
+The [azure-functionapp.yml](../.github/workflows/azure-functionapp.yml) Github Action contains the full infrastructure and code deployment (you can ignore the `integrationtests.yml` as I use those for verification during development).
 
-Before running the pipeline you must modify it a bit:
+The pipeline can run on any Github Action runner as all the software it needs is installed on those (Visual Studio, .Net Core, Az module, ..). Github Actions also offers **2000 free CI/CD minutes per month** which is plenty for the deployment of this function.
 
-Get rid of this group definition:
-``` yaml
-- group: 'Deployment Credentials'
-```
-
-The resourcegroup name used in Azure is also used for storage account, app insights and the function app and must thus be globally unique, so pick something unique (with less than 23 characters to avoid hitting Azure limits):
+Before running the pipeline you must modify the resourcegroup name:
 
 ``` yaml
-- name: ResourceGroupName
-  value: 'letsencrypt-func'
+- env:
+    ResourceGroup: letsencryt-func
 ```
 
-The service connection which is used to deploy your code (see service connection tab in project settings for the exact name you have configured). This is defined multiple times in the yaml file as it cannot be templated:
+The resourcegroup name used in Azure is also used for storage account, app insights and the function app so pick something unique (with less than 23 characters to avoid hitting Azure limits; dashes are automatically dropped for storage account name).
 
-``` yaml
-azureSubscription: 'Opensource Deployments'
-```
+Additionally you must set the `AZURE_CREDENTIALS` secret on your github repository.
 
-Optionally get rid of the `schedules` section at the top (I like my pipelines to run periodically so I know when something is broken).
+Follow the instructions at [Configure azure credentials](https://github.com/marketplace/actions/azure-login#configure-azure-credentials) to generate them, then go to `your repository -> settings -> Secrets` and add the `AZURE_CREDENTIALS` secret.
 
 The modified pipeline should now execute successfully in your account.
 
-Alternatively you can execute the same steps manually from your machine using Az powershell module and Visual Studio.
+Alternatively you can execute the same steps manually from your machine using Az powershell module and Visual Studio by following each step in the github action manually (in short: build, publish & deploy azure function to the azure infrastructure defined in the [ARM template](../deploy/deploy.json)).
 
 ## Configure
 

@@ -1,6 +1,23 @@
 # Changelog
 
-Versioning is done by tagging commits on master and is SemVer compliant.
+Versioning is done by tagging commits on master. See [Versioning considerations](#Versioning-considerations) for details.
+
+# 2.0.0
+
+The primary automation/deployment method is now Github Actions. The documentation has been updated and a [migration guide](./docs/Migration%20Guide.md) exists to allow you to migrate from Azure Pipelines.
+
+## config file:
+
+* No changes
+
+## infrastructure:
+
+* declared `WEBSITE_RUN_FROM_PACKAGE=1` explicitely in ARM template (previously it was implicitly set by the publish task)
+* Switch from Azure Pipelines to Github Actions for automation (old Azure Pipelines along with old setup guide can be found in the [last v1.x commit](https://github.com/MarcStan/lets-encrypt-azure/blob/89bec173830285c33e26f7d9bed476195b95fa5c/azure-pipelines.yml))
+
+## api:
+
+* Removed obsolete `updateResource` parameters from POST endpoint (function detects automatically if a resource needs to be updated)
 
 # 1.1.1
 
@@ -23,3 +40,24 @@ Versioning is done by tagging commits on master and is SemVer compliant.
 # 1.0.0 (initial release)
 
 * Working function with support for Azure CDN & App Services
+
+
+___
+
+# Versioning considerations
+
+All aspects of the function are taken into consideration when updating the version number.
+
+## configuration file
+
+Changes in the configuration file format are considered when they introduce breaking changes.
+
+## infrastructure
+
+Changes in infrastructure are technically automated via ARM templates (and the guidance is to use the provided ARM template). They are thus automatically applied when you deploy the function.
+
+Nevertheless changes (adding/removing) in infrastructure will still be marked as a breaking change in the changelog.
+
+## api
+
+Internal api changes are currently not considered for versioning as the function entrypoints are considered to be the only public api surface.
