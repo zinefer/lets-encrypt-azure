@@ -16,8 +16,8 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
     - name: Azure CLI ARM deployment
       uses: azure/CLI@v1
-      working-directory: internal/deploy
       with:
         inlineScript: |
+          cd internal/deploy
           chmod +x deploy.sh
           ./deploy.sh $ResourceGroup
