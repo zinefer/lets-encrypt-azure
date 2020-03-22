@@ -44,8 +44,7 @@ namespace LetsEncrypt.Func.Functions
             var q = req.RequestUri.ParseQueryString();
             var overrides = new Overrides
             {
-                NewCertificate = "true".Equals(q.GetValues(nameof(Overrides.NewCertificate))?.FirstOrDefault(), StringComparison.OrdinalIgnoreCase),
-                UpdateResource = "true".Equals(q.GetValues(nameof(Overrides.UpdateResource))?.FirstOrDefault(), StringComparison.OrdinalIgnoreCase)
+                NewCertificate = "true".Equals(q.GetValues(nameof(Overrides.NewCertificate))?.FirstOrDefault(), StringComparison.OrdinalIgnoreCase)
             };
             try
             {

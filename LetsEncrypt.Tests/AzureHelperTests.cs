@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace LetsEncrypt.Tests
 {
-    public class AzureWorkaroundTests
+    public class AzureHelperTests
     {
         [Test]
         public void SubscriptionIdShouldBeReadFromEnvironmentVariable()

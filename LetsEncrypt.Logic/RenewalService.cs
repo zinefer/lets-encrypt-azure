@@ -60,12 +60,6 @@ namespace LetsEncrypt.Logic
                 updateResource = true;
             }
 
-            // 4. check if update is necessary
-            if (cfg.Overrides.UpdateResource)
-            {
-                _logger.LogWarning($"Override '{nameof(cfg.Overrides.UpdateResource)}' is enabled. Forcing resource update.");
-                updateResource = true;
-            }
             var resource = _renewalOptionParser.ParseTargetResource(cfg);
             // if no update is required still check with target resource
             // and only skip if latest cert is already used

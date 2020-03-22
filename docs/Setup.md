@@ -80,7 +80,6 @@ By default the function is schedule to run daily and only updates the certificat
 
 To manually invoke it, call the endpoint `<your-function>.azurewebsites.net/api/execute`. Note that it is a POST endpoint.
 
-It currently requires no body but allows a few overrides via querystring:
+It currently requires no body but allows overrides via querystring:
 
 * `newCertificate` - if set to `true` will issue new Let's Encrypt certificates for all sites even if the existing certificates haven't expired (this will also update the azure resources with the new certificates)
-* `updateResource` - if set to `true` will update the azure resource with the existing certificate. This is useful if you already have a certificate in the keyvault and just want to update the azure resources to use it, without issuing a new certificate. Since v1.1.0 this is obsolete as the function is idempotent and will automatically update resources that are not yet using the latest certificate
