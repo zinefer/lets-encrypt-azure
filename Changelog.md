@@ -4,7 +4,7 @@ Versioning is done by tagging commits on master. See [Versioning considerations]
 
 # 2.0.0
 
-The primary automation/deployment method is now Github Actions. The documentation has been updated and a [migration guide](./docs/Migration%20Guide.md) exists to allow you to migrate from Azure Pipelines.
+The primary automation/deployment method is now Github Actions. The documentation has been updated and a [migration guide](./docs/Migration%20guide.md) exists to allow you to migrate from Azure Pipelines.
 
 ## config file:
 
