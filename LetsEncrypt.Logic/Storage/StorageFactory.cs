@@ -1,6 +1,6 @@
 ﻿using LetsEncrypt.Logic.Azure;
 using Microsoft.Azure.Services.AppAuthentication;
-using Microsoft.WindowsAzure.Storage.Auth;
+using Microsoft.Azure.Storage.Auth;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
