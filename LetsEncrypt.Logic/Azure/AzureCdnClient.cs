@@ -130,7 +130,7 @@ namespace LetsEncrypt.Logic.Azure
                         $"resourceGroups/{resourceGroupName}/" +
                         $"providers/Microsoft.Cdn/profiles/{name}/" +
                         $"endpoints/{endpoint.Name}/customDomains/" +
-                        $"{domain.Name}/enableCustomHttps?api-version=2019-04-15";
+                        $"{domain.Name}/enableCustomHttps?api-version=2020-04-15";
 
                     var settings = new JsonSerializerSettings
                     {
@@ -162,6 +162,9 @@ namespace LetsEncrypt.Logic.Azure
 
             [JsonProperty("protocolType")]
             public string ProtocolType => "ServerNameIndication";
+
+            [JsonProperty("minimumTlsVersion")]
+            public string MinimumTlsVersion => "None"; // TODO: could be TLS12
 
             [JsonProperty("certificateSourceParameters")]
             public CertSource CertificateSourceParameters { get; set; }
