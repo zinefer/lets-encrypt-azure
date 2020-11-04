@@ -6,13 +6,13 @@ You must perform these steps to getting this solution up and running:
 
 A keyvault to store the certificates. If you need multiple certificates it is up to you whether you want to use a central keyvault or multiple. Note that so far all supported resources (cdn, app service) require the keyvault to be in the same subscription (but not necessarily the same resourcegroup).
 
-Personally I use one keyvault per project to have a clean seperation betweem projects but a central "certificate keyvault" might make sense as well.
+Personally I use one keyvault per project to have a clean seperation between projects but a central "certificate keyvault" might make sense as well.
 
 Please see the individual `targetResources` in [Supportes resources](./Supported%20resources.md#targetResource) for additional prerequisites based on whichever resources will consume the certificate.
 
 ## Setting up the deployment
 
-To get started fork this repository (I recommend you do minimal changes to the repository to make it easier to [keep it in sync](https://stackoverflow.com/questions/20984802/how-can-i-keep-my-fork-in-sync-without-adding-a-separate-remote/21131381#21131381)).
+To get started fork this repository (I recommend you do minimal changes to the repository to make it easier to [keep it in sync](https://stackoverflow.com/questions/20984802/how-can-i-keep-my-fork-in-sync-without-adding-a-separate-remote/21131381#21131381)). To get notified when a new version is published also consider [watching this repository](https://github.com/MarcStan/lets-encrypt-azure/watchers).
 
 The [azure-functionapp.yml](../.github/workflows/azure-functionapp.yml) Github Action contains the full infrastructure and code deployment (you can ignore the `integrationtests.yml` as I use those for verification during development).
 
