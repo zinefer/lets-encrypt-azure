@@ -148,7 +148,7 @@ namespace LetsEncrypt.Logic.Azure
                             VaultName = cert.Store.Name
                         }
                     }, settings);
-                    var content = new StringContent(json, Encoding.ASCII, "application/json");
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
                     return httpClient.PostAsync(url, content, cancellationToken);
                 }));
 
