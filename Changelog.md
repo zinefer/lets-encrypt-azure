@@ -2,6 +2,10 @@
 
 Versioning is done by tagging commits on master. See [Versioning considerations](#Versioning-considerations) for details.
 
+# 2.0.1
+
+* Bugfix for CDN updates: The internal update request now uses the correct encoding (utf-8) and no longer results in HTTP 415 (Unsupported Media Type)
+
 # 2.0.0
 
 The primary automation/deployment method is now Github Actions. The documentation has been updated and a [migration guide](./docs/Migration%20guide.md) exists to allow you to migrate from Azure Pipelines.
