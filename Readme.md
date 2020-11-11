@@ -22,7 +22,7 @@ The function runs on a daily schedule and automatically renews all certificates 
     * Azure App Service
     * Azure CDN
 * securely store certificates in keyvaults
-* cheap to run (< 0.05$/month)
+* cheap to run (< 0.10$/month)
 
 # Error handling
 

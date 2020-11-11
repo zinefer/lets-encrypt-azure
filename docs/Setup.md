@@ -25,7 +25,9 @@ Before running the pipeline you must modify the resourcegroup name:
     ResourceGroup: letsencryt-func
 ```
 
-The resourcegroup name used in Azure is also used for storage account, app insights and the function app so pick something unique (with less than 23 characters to avoid hitting Azure limits; dashes are automatically dropped for storage account name).
+The resourcegroup name used in Azure is also used for storage account, app insights and the function app so pick something unique.
+
+:warning: Note that keyvault is limited to 23 characters and storage accounts are limited to 24 characters (and no dashes). The ARM template will automatically create a storage account from the resourcegroup name (without any dashes). Incase the name is still longer than 24 characters the storage account name is also truncated.
 
 Additionally you must set the `AZURE_CREDENTIALS` secret on your github repository.
 
