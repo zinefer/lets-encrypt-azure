@@ -11,19 +11,19 @@ using System.Threading.Tasks;
 
 namespace LetsEncrypt.Logic.Providers.TargetResources
 {
-    public class CdnTargetResoure : ITargetResource
+    public class CdnTargetResource : ITargetResource
     {
         private readonly string _resourceGroupName;
         private readonly string[] _endpoints;
         private readonly ILogger _logger;
         private readonly IAzureCdnClient _azureCdnClient;
 
-        public CdnTargetResoure(
+        public CdnTargetResource(
             IAzureCdnClient azureCdnClient,
             string resourceGroupName,
             string name,
             string[] endpoints,
-            ILogger<CdnTargetResoure> logger)
+            ILogger<CdnTargetResource> logger)
         {
             _azureCdnClient = azureCdnClient;
             _resourceGroupName = resourceGroupName ?? throw new ArgumentNullException(nameof(resourceGroupName));

@@ -169,7 +169,7 @@ namespace LetsEncrypt.Logic.Config
                         if (endpoints.IsNullOrEmpty())
                             endpoints = new[] { props.Name };
 
-                        return new CdnTargetResoure(_azureCdnClient, rg, props.Name, endpoints, _loggerFactory.CreateLogger<CdnTargetResoure>());
+                        return new CdnTargetResource(_azureCdnClient, rg, props.Name, endpoints, _loggerFactory.CreateLogger<CdnTargetResource>());
                     }
                 case "appservice":
                     {
