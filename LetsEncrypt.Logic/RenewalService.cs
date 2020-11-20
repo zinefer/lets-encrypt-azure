@@ -94,11 +94,24 @@ namespace LetsEncrypt.Logic
             CertificateRenewalOptions cfg,
             CancellationToken cancellationToken)
         {
-            if (cfg.Overrides.NewCertificate)
+            if (cfg.Overrides.ForceNewCertificates)
             {
-                // ignore existing certificate
-                _logger.LogWarning($"Override '{nameof(cfg.Overrides.NewCertificate)}' is enabled, forcing certificate renewal.");
-                return null;
+                // if overrides contain domain whitelist then only ignore existing certificate if it is not matched
+                if (cfg.Overrides.DomainsToUpdate.Any())
+                {
+                    if (cfg.Overrides.DomainsToUpdate.Any(domain => cfg.HostNames.Contains(domain, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        _logger.LogWarning($"Override '{nameof(cfg.Overrides.ForceNewCertificates)}' is enabled, forcing certificate renewal.");
+                        return null;
+                    }
+                    _logger.LogWarning($"Override '{nameof(cfg.Overrides.ForceNewCertificates)}' is enabled but certificate does not match any of the hostnames -> force renewal is not applied to this certificate.");
+                }
+                else
+                {
+                    // ignore existing certificate
+                    _logger.LogWarning($"Override '{nameof(cfg.Overrides.ForceNewCertificates)}' is enabled, forcing certificate renewal.");
+                    return null;
+                }
             }
 
             var certStore = _renewalOptionParser.ParseCertificateStore(cfg);

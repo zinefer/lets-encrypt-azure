@@ -73,6 +73,29 @@ By default the function is schedule to run daily and only updates the certificat
 
 To manually invoke it, call the endpoint `<your-function>.azurewebsites.net/api/execute`. Note that it is a POST endpoint.
 
-It currently requires no body but allows overrides via querystring:
+It currently allows a body (`application/json`) with overrides:
 
-* `newCertificate` - if set to `true` will issue new Let's Encrypt certificates for all sites even if the existing certificates haven't expired (this will also update the azure resources with the new certificates)
+``` json
+{
+    // if set to `true` new Let's Encrypt certificates are issued
+    // for all sites even if the existing certificates haven't expired
+    // (this will also update the azure resources with the new certificates)
+    "forceNewCertificates": true,
+    // optional parameter that limits the certificates to renew
+    // specifically it only renews certificates where at least one of the listed domains
+    // is included in the respective hostNames array of the config
+    // (only makes sense when forceNewCertificates is also true)
+    "domainsToUpdate": [
+        "example.com",
+        "blog.mysecondarydomain.com"
+    ]
+}
+```
+
+In the example above only certificates containing either hostname `example.com` or `blog.mysecondarydomain.com` (or both) are renewed. Additionally because `forceNewCertificates` is set to true these certificates will be renewed even if they are not yet close to expiring (force renewal). For other (non-matching) certificates renewal will only happen if they are close to expiry.
+
+For legacy reasons the following parameter can also be provided via query string which takes precedence over the `forceNewCertificates` parameter in the body:
+
+* `newCertificate=true`
+
+A warning is logged in such cases and the querystring parameter will be removed in a future version.
