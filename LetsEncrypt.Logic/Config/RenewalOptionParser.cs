@@ -95,8 +95,15 @@ namespace LetsEncrypt.Logic.Config
                             if (string.IsNullOrEmpty(keyVaultName))
                                 keyVaultName = certStore.Name;
 
-                            _logger.LogInformation($"No connection string in config, checking keyvault {keyVaultName} secret {props.SecretName}");
-                            connectionString = await GetSecretAsync(keyVaultName, props.SecretName, cancellationToken);
+                            _logger.LogInformation($"No connection string in config, checking keyvault {keyVaultName} for secret {props.SecretName}");
+                            try
+                            {
+                                connectionString = await GetSecretAsync(keyVaultName, props.SecretName, cancellationToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new AggregateException($"Failed to get connectionstring in secret {props.SecretName} from keyvault {keyVaultName}. If you intended to use storage MSI access, set \"Storage Blob Data Contributor\" on the respective storage container (permissions might take more than 10 minutes to take effect)", new[] { ex });
+                            }
                         }
                         if (string.IsNullOrEmpty(connectionString))
                             throw new InvalidOperationException($"MSI access failed for {accountName} and could not find fallback connection string for storage access. Unable to proceed with Let's encrypt challenge");
