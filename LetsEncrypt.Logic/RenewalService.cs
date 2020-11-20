@@ -122,6 +122,21 @@ namespace LetsEncrypt.Logic
                 {
                     _logger.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is still valid until {existingCert.Expires.Value}. " +
                         $"Will be renewed in {(int)(existingCert.Expires.Value - now).TotalDays - options.RenewXDaysBeforeExpiry} days. Skipping renewal.");
+
+                    // ensure cert covers all requested domains exactly (order doesn't matter, but one cert more or less does)
+                    var requestedDomains = cfg.HostNames
+                        .Select(s => s.ToLowerInvariant())
+                        .OrderBy(s => s)
+                        .ToArray();
+                    var certDomains = existingCert.HostNames
+                        .Select(s => s.ToLowerInvariant())
+                        .OrderBy(s => s)
+                        .ToArray();
+                    if (!requestedDomains.SequenceEqual(certDomains))
+                    {
+                        // if not exact domains as requested consider invalid and issue a new cert
+                        return null;
+                    }
                     return existingCert;
                 }
                 var reason = !isValidAlready ?
