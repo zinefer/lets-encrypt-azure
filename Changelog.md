@@ -2,6 +2,17 @@
 
 Versioning is done by tagging commits on master. See [Versioning considerations](#Versioning-considerations) for details.
 
+# 2.1.0
+
+* Renew certificates automatically when domain list is changed [#19](https://github.com/MarcStan/lets-encrypt-azure/issues/19)
+
+## api changes:
+
+* the `newCertificate` parameter is moved to the body and renamed to `forceNewCertificates` (**plural!**) for the `api/execute` endpoint
+* added `domainsToUpdate` parameter to `api/execute` endpoint. If the optional array is set then only certificates which contain one of the provided domains as a hostname are forcefully updated [#19](https://github.com/MarcStan/lets-encrypt-azure/issues/19)
+
+See the [setup guide](https://github.com/MarcStan/lets-encrypt-azure/blob/master/docs/Setup.md#invoking-the-function-manually) for details.
+
 # 2.0.1
 
 * Bugfix for CDN updates: The internal update request now uses the correct encoding (utf-8) and no longer results in HTTP 415 (Unsupported Media Type)
@@ -10,16 +21,12 @@ Versioning is done by tagging commits on master. See [Versioning considerations]
 
 The primary automation/deployment method is now Github Actions. The documentation has been updated and a [migration guide](./docs/Migration%20guide.md) exists to allow you to migrate from Azure Pipelines.
 
-## config file:
-
-* No changes
-
 ## infrastructure:
 
 * declared `WEBSITE_RUN_FROM_PACKAGE=1` explicitely in ARM template (previously it was implicitly set by the publish task)
 * Switch from Azure Pipelines to Github Actions for automation (old Azure Pipelines along with old setup guide can be found in the [last v1.x commit](https://github.com/MarcStan/lets-encrypt-azure/blob/89bec173830285c33e26f7d9bed476195b95fa5c/azure-pipelines.yml))
 
-## api:
+## api changes:
 
 * Removed obsolete `updateResource` parameters from POST endpoint (function detects automatically if a resource needs to be updated)
 
@@ -50,7 +57,7 @@ ___
 
 # Versioning considerations
 
-All aspects of the function are taken into consideration when updating the version number.
+All aspects of the function are taken into consideration when updating the version number. **If no explict mention is made of any of the below categories then no change was done for the specific category.**
 
 ## configuration file
 
