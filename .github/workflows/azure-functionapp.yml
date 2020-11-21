@@ -48,7 +48,7 @@ jobs:
             cd deploy
             chmod +x deploy.sh
             ./deploy.sh $ResourceGroup
-      - uses: azure/functions-action@ee81c6b30ee530eb1dc97b98ccfa132dcb509abc # pin@v1 
+      - uses: azure/functions-action@a8d2ec41638acb2742695dcb061c05601d2bfb87 # pin@v1 
         with:
           app-name: ${{ env.ResourceGroup }}
           package: functionapp

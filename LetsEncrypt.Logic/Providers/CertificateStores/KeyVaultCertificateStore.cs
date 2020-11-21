@@ -1,10 +1,8 @@
-﻿using LetsEncrypt.Logic.Azure;
-using Microsoft.Azure.KeyVault;
-using Microsoft.Azure.KeyVault.Models;
+﻿using Azure;
+using Azure.Security.KeyVault.Certificates;
+using LetsEncrypt.Logic.Azure;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,23 +10,25 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
 {
     public class KeyVaultCertificateStore : ICertificateStore
     {
-        private readonly IKeyVaultClient _keyVaultClient;
+        private readonly CertificateClient _certificateClient;
         private readonly string _certificateName;
         private readonly string _resourceGroupName;
         private readonly IAzureHelper _azureHelper;
 
         public KeyVaultCertificateStore(
             IAzureHelper azureHelper,
-            IKeyVaultClient keyVaultClient,
+            IKeyVaultFactory keyVaultFactory,
             string keyVaultName,
             string resourceGroupName,
             string certificateName)
         {
             _azureHelper = azureHelper ?? throw new ArgumentNullException(nameof(azureHelper));
-            _keyVaultClient = keyVaultClient ?? throw new ArgumentNullException(nameof(keyVaultClient));
-            Name = keyVaultName ?? throw new ArgumentNullException(nameof(keyVaultClient));
+            Name = keyVaultName ?? throw new ArgumentNullException(nameof(keyVaultName));
             _resourceGroupName = resourceGroupName ?? throw new ArgumentNullException(nameof(resourceGroupName));
-            _certificateName = certificateName ?? throw new ArgumentNullException(nameof(keyVaultClient));
+            _certificateName = certificateName ?? throw new ArgumentNullException(nameof(certificateName));
+
+            // needs to be a new client as it could be a different keyvault each time
+            _certificateClient = keyVaultFactory.CreateCertificateClient(keyVaultName);
         }
 
         public string Name { get; }
@@ -41,68 +41,43 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
         {
             try
             {
-                var cert = await _keyVaultClient.GetCertificateAsync($"https://{Name}.vault.azure.net", _certificateName, cancellationToken);
-                return new CertificateInfo(cert, this);
+                var cert = await _certificateClient.GetCertificateAsync(_certificateName, cancellationToken);
+                return new CertificateInfo(cert.Value, this);
             }
-            catch (KeyVaultErrorException ex)
+            catch (RequestFailedException ex) when (ex.Status == 404)
             {
-                if (ex.Response.StatusCode == System.Net.HttpStatusCode.NotFound ||
-                    ex.Body.Error.Code == "CertificateNotFound")
-                    return null;
-
-                throw;
+                return null;
             }
         }
 
         public async Task<string[]> GetCertificateThumbprintsAsync(CancellationToken cancellationToken)
         {
             var thumbprints = new List<string>();
-            var response = await _keyVaultClient.GetCertificateVersionsAsync($"https://{Name}.vault.azure.net", _certificateName, null, cancellationToken);
-            thumbprints.AddRange(response.Select(x => ThumbprintHelper.Convert(x.X509Thumbprint)));
-
-            while (!string.IsNullOrEmpty(response.NextPageLink))
+            await foreach (var cert in _certificateClient.GetPropertiesOfCertificateVersionsAsync(_certificateName, cancellationToken))
             {
-                response = await _keyVaultClient.GetCertificateVersionsNextAsync(response.NextPageLink, cancellationToken);
-                thumbprints.AddRange(response.Select(x => ThumbprintHelper.Convert(x.X509Thumbprint)));
+                thumbprints.Add(ThumbprintHelper.Convert(cert.X509Thumbprint));
             }
             return thumbprints.ToArray();
         }
 
         public async Task<ICertificate> UploadAsync(byte[] pfxBytes, string password, string[] hostNames, CancellationToken cancellationToken)
         {
-            var cert = LoadFrom(pfxBytes, password);
-            var base64 = Convert.ToBase64String(pfxBytes);
-            var now = DateTime.UtcNow;
-            var attr = new CertificateAttributes(true, cert.NotBefore, cert.NotAfter, now);
-            var r = await ImportCertificateAsync(base64, password, attr, cancellationToken);
+            var r = await ImportCertificateAsync(pfxBytes, password, cancellationToken);
             return new CertificateInfo(r, this);
         }
 
-        private async Task<CertificateBundle> ImportCertificateAsync(
-            string certificateBase64,
+        private async Task<KeyVaultCertificateWithPolicy> ImportCertificateAsync(
+            byte[] certificate,
             string password,
-            CertificateAttributes attributes,
             CancellationToken cancellationToken)
         {
-            return await _keyVaultClient.ImportCertificateAsync($"https://{Name}.vault.azure.net", _certificateName, certificateBase64, password, certificateAttributes: attributes, cancellationToken: cancellationToken);
-        }
-
-        private X509Certificate2 LoadFrom(byte[] bytes, string password)
-        {
-            // must use collection instead of ctor(string filePath), otherwise exceptions are thrown.
-            // https://stackoverflow.com/questions/44053426/cannot-find-the-requested-object-exception-while-creating-x509certificate2-fro/44073265#44073265
-            var collection = new X509Certificate2Collection();
-            if (string.IsNullOrEmpty(password))
+            var options = new ImportCertificateOptions(_certificateName, certificate)
             {
-                collection.Import(bytes, null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
-            }
-            else
-            {
-                // https://stackoverflow.com/a/9984307
-                collection.Import(bytes, password, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
-            }
-
-            return collection[0];
+                Password = password,
+                Enabled = true
+            };
+            var result = await _certificateClient.ImportCertificateAsync(options, cancellationToken);
+            return result.Value;
         }
     }
 }

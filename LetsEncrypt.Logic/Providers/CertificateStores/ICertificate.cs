@@ -4,20 +4,18 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
 {
     public interface ICertificate
     {
-        DateTime? NotBefore { get; }
+        DateTimeOffset? NotBefore { get; }
 
-        DateTime? Expires { get; }
+        DateTimeOffset? Expires { get; }
 
         string Name { get; }
 
         string[] HostNames { get; }
 
-        string Version { get; }
-
         ICertificateStore Store { get; }
 
         string Thumbprint { get; }
 
-        string CertificateVersion { get; }
+        string Version { get; }
     }
 }

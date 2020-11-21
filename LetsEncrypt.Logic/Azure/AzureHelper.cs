@@ -1,5 +1,5 @@
-﻿using LetsEncrypt.Logic.Authentication;
-using Microsoft.Azure.Services.AppAuthentication;
+﻿using Azure.Core;
+using LetsEncrypt.Logic.Authentication;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -23,9 +23,12 @@ namespace LetsEncrypt.Logic.Azure
         /// Creates a new instance.
         /// </summary>
         /// <param name="handler">Used for testing overrides</param>
-        public AzureHelper(HttpMessageHandler handler = null)
+        public AzureHelper(
+            TokenCredential tokenCredential,
+            HttpMessageHandler handler = null)
         {
             _httpClient = new HttpClient(handler ?? new HttpClientHandler());
+            _armHttpClient = new HttpClient(new MsiTokenProvider(tokenCredential, "https://management.azure.com/.default"));
         }
 
         public string GetSubscriptionId()
@@ -40,7 +43,6 @@ namespace LetsEncrypt.Logic.Azure
         /// Returns the tenant id by making an unauthorized call to azure.
         /// </summary>
         /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         public async Task<string> GetTenantIdAsync(CancellationToken cancellationToken)
         {
             var subscriptionId = GetSubscriptionId();
@@ -63,22 +65,9 @@ namespace LetsEncrypt.Logic.Azure
             return tenantId;
         }
 
-        public async Task<HttpClient> GetAuthenticatedARMClientAsync(CancellationToken cancellationToken)
+        public Task<HttpClient> GetAuthenticatedARMClientAsync(CancellationToken cancellationToken)
         {
-            // don't care about race condition. worst case multiple clients are created
-            if (_armHttpClient != null)
-                return _armHttpClient;
-
-            var tokenProvider = new AzureServiceTokenProvider();
-            var tenantId = await GetTenantIdAsync(cancellationToken);
-            // only allow connections to management API with this provider
-            const string msiTokenprovider = "https://management.azure.com/";
-            var cred = new MsiTokenProvider(tokenProvider, tenantId,
-                req => req.RequestUri.ToString().StartsWith(msiTokenprovider)
-                    ? msiTokenprovider
-                    : throw new InvalidOperationException($"Token issuer was asked for a token for '{req.RequestUri}' but is only allowed to issue tokens for '{msiTokenprovider}'"));
-
-            return _armHttpClient = new HttpClient(cred);
+            return Task.FromResult(_armHttpClient);
         }
     }
 }

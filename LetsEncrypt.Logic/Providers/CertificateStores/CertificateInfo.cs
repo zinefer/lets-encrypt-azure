@@ -1,4 +1,4 @@
-﻿using Microsoft.Azure.KeyVault.Models;
+﻿using Azure.Security.KeyVault.Certificates;
 using System;
 using System.Linq;
 
@@ -6,28 +6,26 @@ namespace LetsEncrypt.Logic.Providers.CertificateStores
 {
     public class CertificateInfo : ICertificate
     {
-        private readonly CertificateBundle _certificateBundle;
+        private readonly KeyVaultCertificateWithPolicy _certificate;
 
-        public CertificateInfo(CertificateBundle certificateBundle, ICertificateStore store)
+        public CertificateInfo(KeyVaultCertificateWithPolicy certificate, ICertificateStore store)
         {
-            _certificateBundle = certificateBundle ?? throw new ArgumentNullException(nameof(certificateBundle));
+            _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
             Store = store ?? throw new ArgumentNullException(nameof(store));
         }
 
-        public DateTime? NotBefore => _certificateBundle.Attributes.NotBefore;
+        public DateTimeOffset? NotBefore => _certificate.Properties.NotBefore;
 
-        public DateTime? Expires => _certificateBundle.Attributes.Expires;
+        public DateTimeOffset? Expires => _certificate.Properties.ExpiresOn;
 
-        public string Name => _certificateBundle.CertificateIdentifier.Name;
-
-        public string Version => _certificateBundle.CertificateIdentifier.Version;
+        public string Name => _certificate.Name;
 
         public ICertificateStore Store { get; }
 
-        public string[] HostNames => _certificateBundle.Policy.X509CertificateProperties.SubjectAlternativeNames.DnsNames.ToArray();
+        public string[] HostNames => _certificate.Policy.SubjectAlternativeNames.DnsNames.ToArray();
 
-        public string Thumbprint => ThumbprintHelper.Convert(_certificateBundle.X509Thumbprint);
+        public string Thumbprint => ThumbprintHelper.Convert(_certificate.Properties.X509Thumbprint);
 
-        public string CertificateVersion => _certificateBundle.CertificateIdentifier.Version;
+        public string Version => _certificate.Properties.Version;
     }
 }

@@ -1,13 +1,11 @@
-﻿using LetsEncrypt.Logic.Azure;
+﻿using Azure;
+using LetsEncrypt.Logic.Azure;
 using LetsEncrypt.Logic.Config.Properties;
 using LetsEncrypt.Logic.Extensions;
 using LetsEncrypt.Logic.Providers.CertificateStores;
 using LetsEncrypt.Logic.Providers.ChallengeResponders;
 using LetsEncrypt.Logic.Providers.TargetResources;
 using LetsEncrypt.Logic.Storage;
-using Microsoft.Azure.KeyVault;
-using Microsoft.Azure.KeyVault.Models;
-using Microsoft.Azure.Storage;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System;
@@ -24,24 +22,24 @@ namespace LetsEncrypt.Logic.Config
         public const string FileNameForPermissionCheck = "permission-check.blob";
 
         private readonly IAzureHelper _azureHelper;
-        private readonly IKeyVaultClient _keyVaultClient;
         private readonly ILogger _logger;
         private readonly IStorageFactory _storageFactory;
         private readonly IAzureAppServiceClient _azureAppServiceClient;
         private readonly IAzureCdnClient _azureCdnClient;
         private readonly ILoggerFactory _loggerFactory;
+        private readonly IKeyVaultFactory _keyVaultFactory;
 
         public RenewalOptionParser(
             IAzureHelper azureHelper,
-            IKeyVaultClient keyVaultClient,
+            IKeyVaultFactory keyVaultFactory,
             IStorageFactory storageFactory,
             IAzureAppServiceClient azureAppServiceClient,
             IAzureCdnClient azureCdnClient,
             ILoggerFactory loggerFactory)
         {
-            _azureHelper = azureHelper ?? throw new ArgumentNullException(nameof(azureHelper));
-            _keyVaultClient = keyVaultClient ?? throw new ArgumentNullException(nameof(keyVaultClient));
-            _storageFactory = storageFactory ?? throw new ArgumentNullException(nameof(storageFactory));
+            _azureHelper = azureHelper;
+            _keyVaultFactory = keyVaultFactory;
+            _storageFactory = storageFactory;
             _azureAppServiceClient = azureAppServiceClient;
             _azureCdnClient = azureCdnClient;
             _loggerFactory = loggerFactory;
@@ -84,7 +82,7 @@ namespace LetsEncrypt.Logic.Config
                     {
                         await storage.ExistsAsync(FileNameForPermissionCheck, cancellationToken);
                     }
-                    catch (StorageException e) when (e.RequestInformation.HttpStatusCode == (int)HttpStatusCode.Forbidden)
+                    catch (RequestFailedException e) when (e.Status == (int)HttpStatusCode.Forbidden)
                     {
                         _logger.LogWarning($"MSI access to storage {accountName} failed. Attempting fallbacks via connection string. (You can ignore this warning if you don't use MSI authentication).");
                         var connectionString = props.ConnectionString;
@@ -145,7 +143,7 @@ namespace LetsEncrypt.Logic.Config
                     if (string.IsNullOrEmpty(resourceGroupName))
                         resourceGroupName = keyVaultName;
 
-                    return new KeyVaultCertificateStore(_azureHelper, _keyVaultClient, keyVaultName, resourceGroupName, certificateName);
+                    return new KeyVaultCertificateStore(_azureHelper, _keyVaultFactory, keyVaultName, resourceGroupName, certificateName);
                 default:
                     throw new NotImplementedException(store.Type);
             }
@@ -207,7 +205,6 @@ namespace LetsEncrypt.Logic.Config
         /// as per the usual convention used everywhere.
         /// </summary>
         /// <param name="resourceName"></param>
-        /// <returns></returns>
         private string ConvertToValidStorageAccountName(string resourceName)
             => resourceName?.Replace("-", "");
 
@@ -215,18 +212,18 @@ namespace LetsEncrypt.Logic.Config
         {
             try
             {
-                var secret = await _keyVaultClient.GetSecretAsync($"https://{keyVaultName}.vault.azure.net", secretName, cancellationToken);
-                return secret.Value;
+                var secretClient = _keyVaultFactory.CreateSecretClient(keyVaultName);
+                var secret = await secretClient.GetSecretAsync(secretName, null, cancellationToken);
+                return secret.Value.Value;
             }
-            catch (KeyVaultErrorException ex)
+            catch (RequestFailedException ex)
             {
-                if (ex.Response.StatusCode == HttpStatusCode.Forbidden)
+                if (ex.Status == (int)HttpStatusCode.Forbidden)
                 {
                     _logger.LogError(ex, $"Access forbidden. Unable to get secret from keyvault {keyVaultName}");
                     throw;
                 }
-                if (ex.Response.StatusCode == HttpStatusCode.NotFound ||
-                    ex.Body.Error.Code == "SecretNotFound")
+                if (ex.Status == (int)HttpStatusCode.NotFound)
                     return null;
 
                 throw;
