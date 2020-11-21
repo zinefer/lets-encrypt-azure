@@ -2,6 +2,10 @@
 
 Versioning is done by tagging commits on master. See [Versioning considerations](#Versioning-considerations) for details.
 
+# 2.1.1
+
+* Migrated from deprecated keyvault & storage packages to latest SDKs
+
 # 2.1.0
 
 * Renew certificates automatically when domain list is changed [#19](https://github.com/MarcStan/lets-encrypt-azure/issues/19)

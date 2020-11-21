@@ -92,7 +92,7 @@ It currently allows a body (`application/json`) with overrides:
 }
 ```
 
-In the example above only certificates containing either hostname `example.com` or `blog.mysecondarydomain.com` (or both) are renewed. Additionally because `forceNewCertificates` is set to true these certificates will be renewed even if they are not yet close to expiring (force renewal). For other (non-matching) certificates renewal will only happen if they are close to expiry.
+In the example above because `forceNewCertificates` is set to true certificates containing either hostname `example.com` or `blog.mysecondarydomain.com` (or both) are forcefully renewed. For other (non-matching) certificates renewal will only happen if they are close to expiry.
 
 For legacy reasons the following parameter can also be provided via query string which takes precedence over the `forceNewCertificates` parameter in the body:
 
