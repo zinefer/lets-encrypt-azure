@@ -1,9 +1,9 @@
-﻿using Certes.Acme;
+﻿using Azure.Security.KeyVault.Certificates;
+using Certes.Acme;
 using FluentAssertions;
 using LetsEncrypt.Logic.Azure;
 using LetsEncrypt.Logic.Config;
 using LetsEncrypt.Logic.Storage;
-using Microsoft.Azure.KeyVault;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
@@ -37,9 +37,13 @@ namespace LetsEncrypt.Tests
             factory.Setup(x => x.FromMsiAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(storage.Object));
 
+            var kvFactory = new Mock<IKeyVaultFactory>();
+            var client = new Mock<CertificateClient>();
+            kvFactory.Setup(x => x.CreateCertificateClient("example"))
+                .Returns(client.Object);
             var parser = new RenewalOptionParser(
                 new Mock<IAzureHelper>().Object,
-                new Mock<IKeyVaultClient>().Object,
+                kvFactory.Object,
                 factory.Object,
                 new Mock<IAzureAppServiceClient>().Object,
                 new Mock<IAzureCdnClient>().Object,

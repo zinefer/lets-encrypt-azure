@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -42,11 +43,18 @@ namespace LetsEncrypt.Func.Functions
             ExecutionContext executionContext)
         {
             var q = req.RequestUri.ParseQueryString();
-            var overrides = new Overrides
+            var body = await req.Content.ReadAsStringAsync();
+            var overrides = JsonConvert.DeserializeObject<Overrides>(body) ?? Overrides.None;
+
+            // keep legacy parameter around until next breaking change is introduced
+            var value = q.GetValues("NewCertificate")?.FirstOrDefault();
+            if (!string.IsNullOrEmpty(value))
             {
-                NewCertificate = "true".Equals(q.GetValues(nameof(Overrides.NewCertificate))?.FirstOrDefault(), StringComparison.OrdinalIgnoreCase),
-                UpdateResource = "true".Equals(q.GetValues(nameof(Overrides.UpdateResource))?.FirstOrDefault(), StringComparison.OrdinalIgnoreCase)
-            };
+                _logger.LogWarning("Detected legacy querystring parameter \"newCertificate\" which will be removed in a future version! " +
+                    "Please provide the \"forceNewCertificates\" parameter in the body instead. " +
+                    "See the changelog for details: https://github.com/MarcStan/lets-encrypt-azure/blob/master/Changelog.md");
+                overrides.ForceNewCertificates = "true".Equals(value, StringComparison.OrdinalIgnoreCase);
+            }
             try
             {
                 await RenewAsync(overrides, executionContext, cancellationToken);
@@ -77,6 +85,11 @@ namespace LetsEncrypt.Func.Functions
             ExecutionContext executionContext,
             CancellationToken cancellationToken)
         {
+            if (overrides != null && overrides.DomainsToUpdate == null)
+            {
+                // users could pass null parameter
+                overrides.DomainsToUpdate = new string[0];
+            }
             var configurations = await _configurationLoader.LoadConfigFilesAsync(executionContext, cancellationToken);
             var stopwatch = new Stopwatch();
             // with lots of certificate renewals this could run into function timeout (10mins)

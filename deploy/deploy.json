@@ -5,7 +5,7 @@
     },
     "variables": {
         "appInsightsName": "[resourceGroup().name]",
-        "storageAccountName": "[toLower(replace(resourceGroup().name, '-', ''))]",
+        "storageAccountName": "[take(toLower(replace(resourceGroup().name, '-', '')), 24)]",
         "storageAccountId": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
         "functionAppName": "[resourceGroup().name]",
         "hostingPlanName": "[resourceGroup().name]"
@@ -105,7 +105,8 @@
                         "FUNCTIONS_EXTENSION_VERSION": "~3",
                         "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('microsoft.insights/components/', variables('appInsightsName')), '2015-05-01').InstrumentationKey]",
                         "FUNCTIONS_WORKER_RUNTIME": "dotnet",
-                        "subscriptionId": "[subscription().subscriptionId]"
+                        "subscriptionId": "[subscription().subscriptionId]",
+                        "WEBSITE_RUN_FROM_PACKAGE": "1"
                     }
                 }
             ]

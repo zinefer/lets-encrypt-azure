@@ -60,12 +60,6 @@ namespace LetsEncrypt.Logic
                 updateResource = true;
             }
 
-            // 4. check if update is necessary
-            if (cfg.Overrides.UpdateResource)
-            {
-                _logger.LogWarning($"Override '{nameof(cfg.Overrides.UpdateResource)}' is enabled. Forcing resource update.");
-                updateResource = true;
-            }
             var resource = _renewalOptionParser.ParseTargetResource(cfg);
             // if no update is required still check with target resource
             // and only skip if latest cert is already used
@@ -100,11 +94,24 @@ namespace LetsEncrypt.Logic
             CertificateRenewalOptions cfg,
             CancellationToken cancellationToken)
         {
-            if (cfg.Overrides.NewCertificate)
+            if (cfg.Overrides.ForceNewCertificates)
             {
-                // ignore existing certificate
-                _logger.LogWarning($"Override '{nameof(cfg.Overrides.NewCertificate)}' is enabled, forcing certificate renewal.");
-                return null;
+                // if overrides contain domain whitelist then only ignore existing certificate if it is not matched
+                if (cfg.Overrides.DomainsToUpdate.Any())
+                {
+                    if (cfg.Overrides.DomainsToUpdate.Any(domain => cfg.HostNames.Contains(domain, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        _logger.LogWarning($"Override '{nameof(cfg.Overrides.ForceNewCertificates)}' is enabled, forcing certificate renewal.");
+                        return null;
+                    }
+                    _logger.LogWarning($"Override '{nameof(cfg.Overrides.ForceNewCertificates)}' is enabled but certificate does not match any of the hostnames -> force renewal is not applied to this certificate.");
+                }
+                else
+                {
+                    // ignore existing certificate
+                    _logger.LogWarning($"Override '{nameof(cfg.Overrides.ForceNewCertificates)}' is enabled, forcing certificate renewal.");
+                    return null;
+                }
             }
 
             var certStore = _renewalOptionParser.ParseCertificateStore(cfg);
@@ -128,6 +135,21 @@ namespace LetsEncrypt.Logic
                 {
                     _logger.LogInformation($"Certificate {existingCert.Name} (from source: {certStore.Name}) is still valid until {existingCert.Expires.Value}. " +
                         $"Will be renewed in {(int)(existingCert.Expires.Value - now).TotalDays - options.RenewXDaysBeforeExpiry} days. Skipping renewal.");
+
+                    // ensure cert covers all requested domains exactly (order doesn't matter, but one cert more or less does)
+                    var requestedDomains = cfg.HostNames
+                        .Select(s => s.ToLowerInvariant())
+                        .OrderBy(s => s)
+                        .ToArray();
+                    var certDomains = existingCert.HostNames
+                        .Select(s => s.ToLowerInvariant())
+                        .OrderBy(s => s)
+                        .ToArray();
+                    if (!requestedDomains.SequenceEqual(certDomains))
+                    {
+                        // if not exact domains as requested consider invalid and issue a new cert
+                        return null;
+                    }
                     return existingCert;
                 }
                 var reason = !isValidAlready ?

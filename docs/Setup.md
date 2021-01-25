@@ -1,48 +1,41 @@
 # Setup
 
-For a basic tutorial about deployments with YAML pipelines in Azure DevOps and azure function deployment see my [blog post](https://marcstan.net/blog/2019/12/07/Using-Azure-DevOps-to-deploy-Azure-functions-from-Github/).
-
 You must perform these steps to getting this solution up and running:
 
 ## Prerequisites
 
 A keyvault to store the certificates. If you need multiple certificates it is up to you whether you want to use a central keyvault or multiple. Note that so far all supported resources (cdn, app service) require the keyvault to be in the same subscription (but not necessarily the same resourcegroup).
 
-Personally I use one keyvault per project to have a clean seperation betweem projects but a central "certificate keyvault" might make sense as well.
+Personally I use one keyvault per project to have a clean seperation between projects but a central "certificate keyvault" might make sense as well.
 
 Please see the individual `targetResources` in [Supportes resources](./Supported%20resources.md#targetResource) for additional prerequisites based on whichever resources will consume the certificate.
 
 ## Setting up the deployment
 
-The [azure-pipelines.yml](./azure-pipelines.yml) contains the full infrastructure and code deployment (you can ignore the `integrationtests.yml` as I use those for verification during development).
+To get started fork this repository (I recommend you do minimal changes to the repository to make it easier to [keep it in sync](https://stackoverflow.com/questions/20984802/how-can-i-keep-my-fork-in-sync-without-adding-a-separate-remote/21131381#21131381)). To get notified when a new version is published also consider [watching this repository](https://github.com/MarcStan/lets-encrypt-azure/watchers).
 
-The pipeline can run on any Microsoft Hosted agent as all the software it needs is installed on those (Visual Studio, .Net Core, Az module, ..).
+The [azure-functionapp.yml](../.github/workflows/azure-functionapp.yml) Github Action contains the full infrastructure and code deployment (you can ignore the `integrationtests.yml` as I use those for verification during development).
 
-Before running the pipeline you must modify it a bit:
+The pipeline can run on any Github Action runner as all the software it needs is installed on those (Visual Studio, .Net Core, Az module, ..). Github Actions also offers **2000 free CI/CD minutes per month** which is plenty for the deployment of this function.
 
-Get rid of this group definition:
-``` yaml
-- group: 'Deployment Credentials'
-```
-
-The resourcegroup name used in Azure is also used for storage account, app insights and the function app and must thus be globally unique, so pick something unique (with less than 23 characters to avoid hitting Azure limits):
+Before running the pipeline you must modify the resourcegroup name:
 
 ``` yaml
-- name: ResourceGroupName
-  value: 'letsencrypt-func'
+- env:
+    ResourceGroup: letsencryt-func
 ```
 
-The service connection which is used to deploy your code (see service connection tab in project settings for the exact name you have configured). This is defined multiple times in the yaml file as it cannot be templated:
+The resourcegroup name used in Azure is also used for storage account, app insights and the function app so pick something unique.
 
-``` yaml
-azureSubscription: 'Opensource Deployments'
-```
+:warning: Note that keyvault is limited to 23 characters and storage accounts are limited to 24 characters (and no dashes). The ARM template will automatically create a storage account from the resourcegroup name (without any dashes). Incase the name is still longer than 24 characters the storage account name is also truncated.
 
-Optionally get rid of the `schedules` section at the top (I like my pipelines to run periodically so I know when something is broken).
+Additionally you must set the `AZURE_CREDENTIALS` secret on your github repository.
+
+Follow the instructions at [Configure azure credentials](https://github.com/marketplace/actions/azure-login#configure-azure-credentials) to generate them, then go to `your repository -> settings -> Secrets` and add the `AZURE_CREDENTIALS` secret.
 
 The modified pipeline should now execute successfully in your account.
 
-Alternatively you can execute the same steps manually from your machine using Az powershell module and Visual Studio.
+Alternatively you can execute the same steps manually from your machine using Az powershell module and Visual Studio by following each step in the github action manually (in short: build, publish & deploy azure function to the azure infrastructure defined in the [ARM template](../deploy/deploy.json)).
 
 ## Configure
 
@@ -80,7 +73,29 @@ By default the function is schedule to run daily and only updates the certificat
 
 To manually invoke it, call the endpoint `<your-function>.azurewebsites.net/api/execute`. Note that it is a POST endpoint.
 
-It currently requires no body but allows a few overrides via querystring:
+It currently allows a body (`application/json`) with overrides:
 
-* `newCertificate` - if set to `true` will issue new Let's Encrypt certificates for all sites even if the existing certificates haven't expired (this will also update the azure resources with the new certificates)
-* `updateResource` - if set to `true` will update the azure resource with the existing certificate. This is useful if you already have a certificate in the keyvault and just want to update the azure resources to use it, without issuing a new certificate. Since v1.1.0 this is obsolete as the function is idempotent and will automatically update resources that are not yet using the latest certificate
+``` json
+{
+    // if set to `true` new Let's Encrypt certificates are issued
+    // for all sites even if the existing certificates haven't expired
+    // (this will also update the azure resources with the new certificates)
+    "forceNewCertificates": true,
+    // optional parameter that limits the certificates to renew
+    // specifically it only renews certificates where at least one of the listed domains
+    // is included in the respective hostNames array of the config
+    // (only makes sense when forceNewCertificates is also true)
+    "domainsToUpdate": [
+        "example.com",
+        "blog.mysecondarydomain.com"
+    ]
+}
+```
+
+In the example above because `forceNewCertificates` is set to true certificates containing either hostname `example.com` or `blog.mysecondarydomain.com` (or both) are forcefully renewed. For other (non-matching) certificates renewal will only happen if they are close to expiry.
+
+For legacy reasons the following parameter can also be provided via query string which takes precedence over the `forceNewCertificates` parameter in the body:
+
+* `newCertificate=true`
+
+A warning is logged in such cases and the querystring parameter will be removed in a future version.

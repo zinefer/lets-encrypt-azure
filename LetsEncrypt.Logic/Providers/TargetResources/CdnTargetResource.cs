@@ -11,19 +11,19 @@ using System.Threading.Tasks;
 
 namespace LetsEncrypt.Logic.Providers.TargetResources
 {
-    public class CdnTargetResoure : ITargetResource
+    public class CdnTargetResource : ITargetResource
     {
         private readonly string _resourceGroupName;
         private readonly string[] _endpoints;
         private readonly ILogger _logger;
         private readonly IAzureCdnClient _azureCdnClient;
 
-        public CdnTargetResoure(
+        public CdnTargetResource(
             IAzureCdnClient azureCdnClient,
             string resourceGroupName,
             string name,
             string[] endpoints,
-            ILogger<CdnTargetResoure> logger)
+            ILogger<CdnTargetResource> logger)
         {
             _azureCdnClient = azureCdnClient;
             _resourceGroupName = resourceGroupName ?? throw new ArgumentNullException(nameof(resourceGroupName));
@@ -69,7 +69,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
                             details.CustomHttpsProvisioningSubstate != CustomHttpsProvisioningSubstate.CertificateDeployed ||
                             !IsCertificateFromSecretVersion(cert, details.CustomHttpsParameters.CertificateSourceParameters.SecretVersion))
                         {
-                            _logger.LogWarning($"Wrong certificate is rolled out on (endpoint: {endpoint.Name}, domain: {details.HostName}). Expected certificate version: {cert.CertificateVersion}, found: {details.CustomHttpsParameters?.CertificateSourceParameters?.SecretVersion ?? "null"}. Provisioning status was: {details.CustomHttpsProvisioningState}, sub state: {details.CustomHttpsProvisioningSubstate}");
+                            _logger.LogWarning($"Wrong certificate is rolled out on (endpoint: {endpoint.Name}, domain: {details.HostName}). Expected certificate version: {cert.Version}, found: {details.CustomHttpsParameters?.CertificateSourceParameters?.SecretVersion ?? "null"}. Provisioning status was: {details.CustomHttpsProvisioningState}, sub state: {details.CustomHttpsProvisioningSubstate}");
                             return false;
                         }
                     }
@@ -143,7 +143,7 @@ namespace LetsEncrypt.Logic.Providers.TargetResources
         private bool IsCertificateFromSecretVersion(ICertificate cert, string secretVersion)
         {
             // no need to fetch from keyvault only to compare thumbprints. comparing secret version achieves the same guarantee
-            return cert.CertificateVersion.Equals(secretVersion, StringComparison.OrdinalIgnoreCase);
+            return cert.Version.Equals(secretVersion, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

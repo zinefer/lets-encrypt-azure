@@ -31,9 +31,7 @@ namespace LetsEncrypt.Func.Functions
         /// Time triggered function that checks every domain for a valid https certificate and logs exceptions if not.
         /// </summary>
         /// <param name="timer"></param>
-        /// <param name="log"></param>
         /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         [FunctionName("integration-test")]
         public Task RenewAsync(
           [TimerTrigger(Schedule.TwiceDaily)] TimerInfo timer,

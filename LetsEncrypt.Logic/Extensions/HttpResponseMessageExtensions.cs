@@ -1,4 +1,4 @@
-﻿using Microsoft.Rest.TransientFaultHandling;
+﻿using Azure;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -12,16 +12,12 @@ namespace LetsEncrypt.Logic.Extensions
         /// </summary>
         /// <param name="response"></param>
         /// <param name="errorMessage"></param>
-        /// <returns></returns>
         public static async Task EnsureSuccessAsync(this HttpResponseMessage response, string errorMessage)
         {
             if (!response.IsSuccessStatusCode)
             {
                 var c = await response.Content.ReadAsStringAsync();
-                throw new HttpRequestWithStatusException($"{errorMessage}. See inner exception for details.", new InvalidOperationException(c))
-                {
-                    StatusCode = response.StatusCode
-                };
+                throw new RequestFailedException((int)response.StatusCode, $"{errorMessage}. See inner exception for details.", new InvalidOperationException(c));
             }
         }
     }

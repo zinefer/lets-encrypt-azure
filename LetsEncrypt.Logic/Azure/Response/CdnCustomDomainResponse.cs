@@ -51,6 +51,7 @@
         DeployingCertificate,
         CertificateDeployed,
         DeletingCertificate,
-        CertificateDeleted
+        CertificateDeleted,
+        ImportingUserProvidedCertificate
     }
 }
