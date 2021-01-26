@@ -4,7 +4,7 @@ on:
       - master
 
 env:
-  ResourceGroup: letsencrypt-func
+  ResourceGroup: lets-encrypt-azure-84f
 jobs:
   build:
     runs-on: ubuntu-latest
